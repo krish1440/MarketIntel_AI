@@ -1,0 +1,13 @@
+nsepython
+bsedata
+sqlalchemy
+psycopg2-binary
+python-dotenv
+yfinance
+pandas
+ta-lib
+intel-extension-for-pytorch
+torch
+transformers
+xgboost
+scikit-learn
