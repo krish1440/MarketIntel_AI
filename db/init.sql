@@ -30,6 +30,18 @@ CREATE TABLE IF NOT EXISTS historical_prices (
 
 CREATE INDEX IF NOT EXISTS idx_historical_prices_stock_date ON historical_prices(stock_id, date);
 
+CREATE TABLE IF NOT EXISTS news_articles (
+    id SERIAL PRIMARY KEY,
+    stock_id INTEGER REFERENCES stocks(id),
+    title TEXT NOT NULL,
+    summary TEXT,
+    url TEXT UNIQUE NOT NULL,
+    published_at TIMESTAMP,
+    sentiment_score DECIMAL(10, 4) DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_articles_stock_published ON news_articles(stock_id, published_at);
+
 -- Pre-populate with some major stocks
 INSERT INTO stocks (ticker, name, exchange) VALUES 
 ('RELIANCE', 'Reliance Industries Ltd.', 'NSE'),

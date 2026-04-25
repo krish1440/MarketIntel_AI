@@ -1,5 +1,7 @@
 nsepython
 bsedata
+feedparser
+beautifulsoup4
 sqlalchemy
 psycopg2-binary
 python-dotenv

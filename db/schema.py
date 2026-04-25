@@ -32,6 +32,16 @@ class HistoricalPrice(Base):
     close = Column(DECIMAL(15, 2))
     volume = Column(BIGINT)
 
+class NewsArticle(Base):
+    __tablename__ = 'news_articles'
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey('stocks.id'))
+    title = Column(String, nullable=False)
+    summary = Column(String)
+    url = Column(String, unique=True, nullable=False)
+    published_at = Column(DateTime)
+    sentiment_score = Column(DECIMAL(10, 4), nullable=True)
+
 def get_engine():
     # Database credentials matching docker-compose.yml
     DATABASE_URL = "postgresql://admin:password@localhost:5432/stock_intelligence"
