@@ -2,6 +2,8 @@ nsepython
 bsedata
 feedparser
 beautifulsoup4
+fastapi
+uvicorn
 sqlalchemy
 psycopg2-binary
 python-dotenv
