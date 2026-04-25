@@ -4,12 +4,13 @@ services:
     container_name: stock_intelligence_db
     environment:
       - POSTGRES_DB=stock_intelligence
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
 
 volumes:
