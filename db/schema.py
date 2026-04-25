@@ -8,14 +8,16 @@ Base = declarative_base()
 class Stock(Base):
     __tablename__ = 'stocks'
     id = Column(Integer, primary_key=True)
-    ticker = Column(String(20), unique=True, nullable=False)
+    ticker = Column(String(20), unique=True, nullable=False) # Base ticker (e.g. RELIANCE)
     name = Column(String(100))
-    exchange = Column(String(10), nullable=False)
+    nse_symbol = Column(String(20)) # e.g. RELIANCE.NS
+    bse_symbol = Column(String(20)) # e.g. 500325.BO
 
 class LiveQuote(Base):
     __tablename__ = 'live_quotes'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
+    exchange = Column(String(10)) # NSE or BSE
     price = Column(DECIMAL(15, 2), nullable=False)
     change_percent = Column(DECIMAL(10, 4))
     volume = Column(BIGINT)
@@ -25,6 +27,7 @@ class HistoricalPrice(Base):
     __tablename__ = 'historical_prices'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
+    exchange = Column(String(10)) # NSE or BSE
     date = Column(Date, nullable=False)
     open = Column(DECIMAL(15, 2))
     high = Column(DECIMAL(15, 2))
@@ -43,8 +46,7 @@ class NewsArticle(Base):
     sentiment_score = Column(DECIMAL(10, 4), nullable=True)
 
 def get_engine():
-    # Database credentials matching docker-compose.yml
-    DATABASE_URL = "postgresql://admin:password@localhost:5432/stock_intelligence"
+    DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
     return create_engine(DATABASE_URL)
 
 def get_session():

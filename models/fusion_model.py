@@ -1,14 +1,16 @@
 import xgboost as xgb
 import os
 import torch
-from .price_model import StockLSTM
-from .sentiment_model import get_sentiment_score
+from .price_lstm import PriceLSTM
 
 class MultimodalFusion:
-    def __init__(self, lstm_input_dim, lstm_checkpoint=None, xgb_checkpoint=None):
-        self.lstm_model = StockLSTM(lstm_input_dim, 64, 2, 1)
+    def __init__(self, lstm_input_dim=5, lstm_checkpoint=None, xgb_checkpoint=None):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.lstm_model = PriceLSTM(lstm_input_dim, 64, 2, 1).to(self.device)
+        
         if lstm_checkpoint and os.path.exists(lstm_checkpoint):
-            self.lstm_model.load_state_dict(torch.load(lstm_checkpoint))
+            print(f"Loading LSTM checkpoint from {lstm_checkpoint}")
+            self.lstm_model.load_state_dict(torch.load(lstm_checkpoint, map_location=self.device))
         self.lstm_model.eval()
         
         self.xgb_model = xgb.XGBClassifier()
@@ -21,6 +23,7 @@ class MultimodalFusion:
         """
         # 1. Get LSTM prediction
         with torch.no_grad():
+            price_sequence = price_sequence.to(self.device)
             lstm_pred = self.lstm_model(price_sequence).item()
             
         # 2. Process sentiment (mean of recent scores)
@@ -29,14 +32,37 @@ class MultimodalFusion:
         else:
             sent_avg = 0.0
             
-        # 3. Create feature vector: [lstm_pred, sentiment_avg]
+        # 3. Create feature vector: [lstm_pred, sent_avg]
         return [lstm_pred, sent_avg]
 
-    def predict(self, feature_vector):
+    def predict(self, feature_vector, rsi=50):
         """
-        Predict final movement using XGBoost.
+        Predict final movement using XGBoost or Heuristic if not trained.
         """
-        # XGBoost expects 2D array
-        pred = self.xgb_model.predict([feature_vector])[0]
-        probs = self.xgb_model.predict_proba([feature_vector])[0]
-        return pred, max(probs)
+        try:
+            if hasattr(self.xgb_model, 'n_features_in_'):
+                pred = self.xgb_model.predict([feature_vector])[0]
+                probs = self.xgb_model.predict_proba([feature_vector])[0]
+                return pred, max(probs)
+        except:
+            pass
+            
+        # Advanced Heuristic Fallback (Multimodal Rule-based)
+        lstm_score, sent_avg = feature_vector
+        
+        # LSTM score is the predicted normalized close price.
+        # We'll use a threshold-based signal if it's high/low
+        
+        # BUY Logic
+        if rsi < 30 or sent_avg > 0.4 or lstm_score > 0.7:
+            return 1, 0.85
+        # SELL Logic
+        elif rsi > 70 or sent_avg < -0.4 or lstm_score < 0.3:
+            return 0, 0.85
+        # Trend Following
+        elif sent_avg > 0.1 or lstm_score > 0.6:
+            return 1, 0.70
+        elif sent_avg < -0.1 or lstm_score < 0.4:
+            return 0, 0.70
+        
+        return 0, 0.5 # Default HOLD
