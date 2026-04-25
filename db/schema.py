@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, BIGINT, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, BIGINT, DateTime, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
@@ -20,6 +20,17 @@ class LiveQuote(Base):
     change_percent = Column(DECIMAL(10, 4))
     volume = Column(BIGINT)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+class HistoricalPrice(Base):
+    __tablename__ = 'historical_prices'
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey('stocks.id'))
+    date = Column(Date, nullable=False)
+    open = Column(DECIMAL(15, 2))
+    high = Column(DECIMAL(15, 2))
+    low = Column(DECIMAL(15, 2))
+    close = Column(DECIMAL(15, 2))
+    volume = Column(BIGINT)
 
 def get_engine():
     # Database credentials matching docker-compose.yml
