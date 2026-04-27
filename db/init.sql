@@ -1,15 +1,18 @@
--- Initial schema for Stock Market Intelligence System
+-- Modernized Schema for Stock Market Intelligence System
+-- Matches SQLAlchemy models in db/schema.py
 
 CREATE TABLE IF NOT EXISTS stocks (
     id SERIAL PRIMARY KEY,
     ticker VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100),
-    exchange VARCHAR(10) NOT NULL -- 'NSE' or 'BSE'
+    nse_symbol VARCHAR(20),
+    bse_symbol VARCHAR(20)
 );
 
 CREATE TABLE IF NOT EXISTS live_quotes (
     id SERIAL PRIMARY KEY,
     stock_id INTEGER REFERENCES stocks(id),
+    exchange VARCHAR(10),
     price DECIMAL(15, 2) NOT NULL,
     change_percent DECIMAL(10, 4),
     volume BIGINT,
@@ -19,16 +22,15 @@ CREATE TABLE IF NOT EXISTS live_quotes (
 CREATE TABLE IF NOT EXISTS historical_prices (
     id SERIAL PRIMARY KEY,
     stock_id INTEGER REFERENCES stocks(id),
+    exchange VARCHAR(10),
     date DATE NOT NULL,
     open DECIMAL(15, 2),
     high DECIMAL(15, 2),
     low DECIMAL(15, 2),
     close DECIMAL(15, 2),
     volume BIGINT,
-    UNIQUE (stock_id, date)
+    UNIQUE (stock_id, exchange, date)
 );
-
-CREATE INDEX IF NOT EXISTS idx_historical_prices_stock_date ON historical_prices(stock_id, date);
 
 CREATE TABLE IF NOT EXISTS news_articles (
     id SERIAL PRIMARY KEY,
@@ -37,18 +39,16 @@ CREATE TABLE IF NOT EXISTS news_articles (
     summary TEXT,
     url TEXT UNIQUE NOT NULL,
     published_at TIMESTAMP,
-    sentiment_score DECIMAL(10, 4) DEFAULT NULL
+    sentiment_score DECIMAL(10, 4)
 );
 
-CREATE INDEX IF NOT EXISTS idx_news_articles_stock_published ON news_articles(stock_id, published_at);
-
--- Pre-populate with some major stocks
-INSERT INTO stocks (ticker, name, exchange) VALUES 
-('RELIANCE', 'Reliance Industries Ltd.', 'NSE'),
-('TCS', 'Tata Consultancy Services Ltd.', 'NSE'),
-('HDFCBANK', 'HDFC Bank Ltd.', 'NSE'),
-('ICICIBANK', 'ICICI Bank Ltd.', 'NSE'),
-('INFY', 'Infosys Ltd.', 'NSE'),
-('RELIANCE', 'Reliance Industries Ltd.', 'BSE'),
-('500325', 'Reliance Industries Ltd.', 'BSE')
-ON CONFLICT (ticker) DO NOTHING;
+-- Pre-populate with major stocks using verified symbols
+INSERT INTO stocks (ticker, name, nse_symbol, bse_symbol) VALUES 
+('RELIANCE', 'Reliance Industries Ltd.', 'RELIANCE.NS', 'RELIANCE.BO'),
+('TCS', 'Tata Consultancy Services Ltd.', 'TCS.NS', 'TCS.BO'),
+('HDFCBANK', 'HDFC Bank Ltd.', 'HDFCBANK.NS', 'HDFCBANK.BO'),
+('INFY', 'Infosys Ltd.', 'INFY.NS', 'INFY.BO'),
+('ICICIBANK', 'ICICI Bank Ltd.', 'ICICIBANK.NS', 'ICICIBANK.BO')
+ON CONFLICT (ticker) DO UPDATE SET 
+    nse_symbol = EXCLUDED.nse_symbol,
+    bse_symbol = EXCLUDED.bse_symbol;
