@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
 import json
+import numpy as np
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,6 +20,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def clean_nas(obj):
+    if isinstance(obj, dict):
+        return {k: clean_nas(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nas(v) for v in obj]
+    elif isinstance(obj, (float, np.float64, np.float32)) and np.isnan(obj):
+        return 0.0
+    return obj
 
 predict_service = PredictionService()
 
@@ -42,7 +52,7 @@ def list_stocks():
             })
             seen.add(s.ticker)
     session.close()
-    return unique_stocks
+    return clean_nas(unique_stocks)
 
 @app.get("/api/model-status")
 def get_model_status():
@@ -54,7 +64,7 @@ def get_model_status():
 
 @app.get("/api/predict/{ticker}")
 def predict_stock(ticker: str, exchange: str = "NSE"):
-    return predict_service.get_signal(ticker, exchange)
+    return clean_nas(predict_service.get_signal(ticker, exchange))
 
 @app.get("/api/history/{ticker}")
 def get_history(ticker: str, exchange: str = "NSE", days: int = 30):
@@ -68,7 +78,7 @@ def get_history(ticker: str, exchange: str = "NSE", days: int = 30):
     ).order_by(HistoricalPrice.date.desc()).limit(days).all()
     
     session.close()
-    return [{"date": h.date.isoformat(), "close": float(h.close)} for h in reversed(history)]
+    return clean_nas([{"date": h.date.isoformat(), "close": float(h.close)} for h in reversed(history) if h.close is not None and not (isinstance(h.close, float) and np.isnan(h.close))])
 
 @app.get("/api/news/{ticker}")
 def get_news(ticker: str):
