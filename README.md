@@ -60,6 +60,28 @@ python run_app.py
 
 ---
 
+---
+
+## 📁 Detailed Project Structure
+
+### 🛠️ Core Directories
+*   **`/api`**: The backend brain. Powered by **FastAPI**, it serves real-time stock data, history, and metadata to the dashboard via high-speed JSON endpoints.
+*   **`/dashboard`**: The visual command center. A **Next.js 14** application with a premium UI for monitoring individual stock performance and market-wide trends.
+*   **`/db`**: Database layer. Contains the **SQLAlchemy** schema definitions (`schema.py`) and connection logic for the PostgreSQL engine.
+*   **`/ingestion`**: The data pipeline hub.
+    *   `discover_symbols.py`: Automatically maps and seeds the 2,300+ NSE/BSE stock universe.
+    *   `backfill_history.py`: A high-speed, idempotent engine that downloads 5-year historical OHLCV data.
+    *   `poll_prices.py`: The "Heartbeat" service that tracks live price changes every minute.
+    *   `news_aggregator.py`: A rotational engine that builds an AI-ready dataset of global financial news tagged to specific tickers.
+*   **`/scripts`**: Production utilities.
+    *   `export_kaggle.py`: A high-performance export engine that prepares 4.5M+ row datasets for Kaggle, ensuring data integrity and preserving NaNs.
+
+### 🔑 Key Files
+*   **`run_app.py`**: The **Master Orchestrator**. One command to start the DB, sync data, and launch all background services (API, Poller, News, Dashboard).
+*   **`.gitignore`**: Carefully configured to manage large Kaggle assets (`data_exports/`) while keeping the codebase clean.
+
+---
+
 ## 📊 Dashboard Access
 *   **Terminal UI**: `http://localhost:3000`
 *   **Interactive API**: `http://localhost:8000/docs`
