@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Link } from "lucide-react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +32,7 @@ export default function RootLayout({
         <div className="flex-grow">{children}</div>
         <footer className="border-t border-slate-900 bg-slate-950 py-8 text-center">
           <p className="text-slate-500 text-sm tracking-widest font-medium">
-            Designed and developed by <span className="text-slate-300 font-bold">Krish Chaudhary</span>
+            Designed and developed by <Link href="https://portfolio-krish-chaudhary.vercel.app/" target="_blank" className="text-slate-300 font-bold hover:text-indigo-400 transition-colors">Krish Chaudhary</Link>
           </p>
         </footer>
       </body>
