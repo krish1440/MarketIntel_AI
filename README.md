@@ -1,6 +1,6 @@
-# 🚀 TradeIntellect: Total Market Intelligence Engine
+# 🚀 MarketIntel AI: Total Market Intelligence Engine
 
-TradeIntellect is a production-grade, high-performance market monitoring and prediction platform. It provides **total market coverage** for over 2,300+ stocks across the NSE (National Stock Exchange) and BSE (Bombay Stock Exchange), powered by real-time data, batch history ingestion, and AI-driven news sentiment.
+MarketIntel AI is a production-grade, high-performance market monitoring and prediction platform. It provides **total market coverage** for over 2,300+ stocks across the NSE (National Stock Exchange) and BSE (Bombay Stock Exchange), powered by real-time data, batch history ingestion, and AI-driven news sentiment.
 
 ---
 

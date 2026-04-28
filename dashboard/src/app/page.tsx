@@ -30,7 +30,7 @@ export default function Home() {
         <header className="mb-12 md:flex justify-between items-end gap-8">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Market Intelligence
+              MarketIntel AI
             </h1>
             <p className="text-slate-400 mt-2">Premium Multimodal Stock Analysis (Full Market)</p>
           </div>
