@@ -16,6 +16,9 @@ export default function StockDetail() {
 
   const fetchData = async (ex: 'NSE' | 'BSE') => {
     setLoading(true);
+    // Trigger an instant news refresh in the background
+    fetch(`http://localhost:8000/api/news/refresh/${ticker}`, { method: 'POST' });
+    
     const [predData, newsData, histData, statusData] = await Promise.all([
       fetch(`http://localhost:8000/api/predict/${ticker}?exchange=${ex}`).then(res => res.json()),
       fetch(`http://localhost:8000/api/news/${ticker}`).then(res => res.json()),
@@ -259,9 +262,24 @@ export default function StockDetail() {
 
             {/* News Sidebar */}
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[3rem] p-8 backdrop-blur-xl">
-              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-8 flex items-center gap-2">
-                <Activity className="w-3 h-3" /> Market Intel
-              </h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                  <Activity className="w-3 h-3" /> Market Intel
+                </h2>
+                <button 
+                  onClick={async () => {
+                    setLoading(true);
+                    await fetch(`http://localhost:8000/api/news/refresh/${ticker}`, { method: 'POST' });
+                    const freshNews = await fetch(`http://localhost:8000/api/news/${ticker}`).then(res => res.json());
+                    setNews(freshNews);
+                    setLoading(false);
+                  }}
+                  className="p-1.5 hover:bg-slate-800 rounded-lg transition-colors text-slate-500 hover:text-indigo-400"
+                  title="Instant News Refresh"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <div className="space-y-6">
                 {news.slice(0, 5).map((item, i) => (
                   <a key={i} href={item.url} target="_blank" className="block group">
