@@ -33,12 +33,10 @@ export default function LandingPage() {
       </div>
 
       {/* --- STICKY NAV --- */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/5 py-4' : 'py-8'}`}>
+        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/5 py-4' : 'py-8'}`}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-               <span className="font-black text-xl italic">M</span>
-            </div>
+            <img src="/icon.png" alt="MarketIntel Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-indigo-500/20" />
             <span className="font-black tracking-tighter text-2xl bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">MarketIntel AI</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">

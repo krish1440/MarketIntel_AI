@@ -106,6 +106,7 @@ export default function StockDetail() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <Link href="/market" className="flex items-center text-slate-500 hover:text-white transition-all group">
+            <img src="/icon.png" alt="Logo" className="w-8 h-8 object-contain mr-3 opacity-50 group-hover:opacity-100 transition-all" />
             <div className="bg-slate-900 p-2 rounded-full mr-3 group-hover:bg-slate-800 transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </div>

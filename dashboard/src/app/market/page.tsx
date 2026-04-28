@@ -29,7 +29,8 @@ export default function Home() {
       <div className="max-w-6xl mx-auto">
         <header className="mb-12 md:flex justify-between items-end gap-8">
           <div>
-            <Link href="/">
+            <Link href="/" className="flex items-center gap-3 group">
+              <img src="/icon.png" alt="Logo" className="w-10 h-10 object-contain rounded-lg shadow-lg shadow-indigo-500/10 group-hover:scale-110 transition-transform" />
               <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
                 MarketIntel AI
               </h1>
