@@ -1,7 +1,12 @@
 const API_BASE = "http://localhost:8000/api";
 
-export async function getStocks() {
-  const res = await fetch(`${API_BASE}/stocks`);
+export async function getStocks(page: number = 1, limit: number = 50, search: string = "") {
+  const url = new URL(`${API_BASE}/stocks`);
+  url.searchParams.append("page", page.toString());
+  url.searchParams.append("limit", limit.toString());
+  if (search) url.searchParams.append("search", search);
+  
+  const res = await fetch(url.toString());
   return res.json();
 }
 
