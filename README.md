@@ -46,7 +46,7 @@ MarketIntel AI is a production-grade, high-performance market monitoring and pre
 *   Node.js & npm
 
 ### 2. One-Command Setup
-TradeIntellect uses a **Master Orchestrator** to handle everything. You do not need to run individual scripts.
+MarketIntel AI uses a **Master Orchestrator** to handle everything. You do not need to run individual scripts.
 
 ```powershell
 python run_app.py
