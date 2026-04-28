@@ -1,107 +1,75 @@
-# 🌌 TradeIntellect: AI-Driven Multimodal Stock Intelligence
+# 🚀 TradeIntellect: Total Market Intelligence Engine
 
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-[![PyTorch](https://img.shields.io/badge/AI-PyTorch-EE4C2C?style=for-the-badge&logo=pytorch)](https://pytorch.org/)
-
-**TradeIntellect** is a high-performance, real-time stock market intelligence platform that combines **LSTM Neural Networks**, **Technical Analysis**, and **Sentiment Mining** to provide institutional-grade trading signals.
+TradeIntellect is a production-grade, high-performance market monitoring and prediction platform. It provides **total market coverage** for over 2,300+ stocks across the NSE (National Stock Exchange) and BSE (Bombay Stock Exchange), powered by real-time data, batch history ingestion, and AI-driven news sentiment.
 
 ---
 
-## 🏗️ System Architecture
+## 💎 Core Capabilities
 
-The project is built on a distributed micro-services architecture for maximum scalability and data reliability.
+### 🏛️ Total Market Coverage
+*   **2,361+ Symbols**: Fully mapped and seeded equity list covering both NSE and BSE.
+*   **Dual-Exchange Monitoring**: Switch between NSE and BSE benchmarks with a single click.
+*   **Smart Discovery**: Automated symbol discovery engine that identifies new listings and updates.
 
-```mermaid
-graph TD
-    A[Data Ingestion] -->|Real-time| B[(PostgreSQL)]
-    A -->|History| B
-    B --> C[Intelligence Layer]
-    C -->|Fusion Model| D[FastAPI Backend]
-    D --> E[Next.js Dashboard]
-    F[News Scrapers] -->|Sentiment| B
+### ⚡ High-Performance Data Pipeline
+*   **Fast Batch Ingestion**: Uses a high-speed 50-stock batch fetching method (5-year history backfill).
+*   **Idempotent & Robust**: Resumable downloads with built-in duplicate protection and rate-limit awareness.
+*   **Real-Time Poller**: Multi-threaded 100-stock chunk polling ensures the entire market is tracked every minute.
+
+### 🧠 AI-Driven News Intelligence
+*   **Rotational News Engine**: Background service that cycles through all 2,300+ stocks safely to avoid IP bans.
+*   **Broad Market Mapping**: Automatically tags global business headlines to specific tickers using keyword intelligence.
+*   **Instant Fetch**: Real-time news refresh triggered instantly when you open a stock detail page.
+*   **Sentiment Analysis**: (Placeholder) Ready for LSTM/Transformer-based sentiment scoring.
+
+### 📈 Predictive Analytics
+*   **LSTM Neural Network**: Trained on 1.6M+ historical data points for multi-day price forecasting.
+*   **Technical Suite**: Integrated RSI, MACD, SMA, ATR, and Bollinger Band calculations.
+*   **Fusion Signal**: Combines technical indicators with AI forecasts into a single **BUY/SELL** signal.
+
+---
+
+## 🛠️ Technology Stack
+
+*   **Frontend**: Next.js 14, Tailwind CSS, Lucide Icons.
+*   **Backend**: FastAPI, SQLAlchemy (PostgreSQL).
+*   **Database**: PostgreSQL (Dockerized) with 1.6M+ historical records.
+*   **Ingestion**: Python, FeedParser, BeautifulSoup4, yFinance.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+*   Python 3.10+
+*   Docker & Docker Compose
+*   Node.js & npm
+
+### 2. One-Command Setup
+TradeIntellect uses a **Master Orchestrator** to handle everything. You do not need to run individual scripts.
+
+```powershell
+python run_app.py
 ```
 
-### 📂 Folder Structure & Components
-
-| Folder | Purpose | Key Files |
-| :--- | :--- | :--- |
-| `api/` | **Backend Core** | `main.py` (FastAPI endpoints, CORS, Robustness layer) |
-| `dashboard/` | **Frontend Terminal** | `src/app/` (Next.js 15 pages), `src/components/` (Glassmorphic UI) |
-| `db/` | **Persistence Layer** | `schema.py` (SQLAlchemy Models), `init.sql` (Seed Data) |
-| `ingestion/` | **Data Pipelines** | `poll_prices.py` (Live Quotes), `news_aggregator.py` (NLP ingestion) |
-| `intelligence/` | **AI Logic** | `prediction_service.py` (Signal generator, fallback logic) |
-| `models/` | **ML Research** | `price_lstm.py` (Architecture), `fusion_model.py` (Multimodal engine) |
+### 3. What happens next?
+*   **Docker DB**: Starts automatically.
+*   **Market Discovery**: Seeds all 2,300+ stocks if the DB is empty.
+*   **Batch Backfill**: Downloads 5 years of data for all stocks (idempotent).
+*   **Live Services**: Launches the API, Poller, News Engine, and Dashboard in separate windows.
 
 ---
 
-## ⚡ Quick Start Guide
-
-### 1. Database Setup (Docker)
-Ensure Docker Desktop is running. This creates a persistent PostgreSQL instance with optimized schema.
-```bash
-docker-compose up -d
-```
-
-### 2. Backend Environment
-Initialize the Python virtual environment and install dependencies.
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3. Frontend Environment
-```bash
-cd dashboard
-npm install
-npm run dev
-```
-
-### 4. Activate Data Pipelines
-In a new terminal, start the background ingestion workers:
-```bash
-# Terminal A: Live Price Polling
-python ingestion/poll_prices.py
-
-# Terminal B: Historical Backfill (Required for first run)
-python ingestion/backfill_history.py
-
-# Terminal C: Sentiment Analysis
-python ingestion/news_aggregator.py
-
-# Terminal D: API Server
-python api/main.py
-```
+## 📊 Dashboard Access
+*   **Terminal UI**: `http://localhost:3000`
+*   **Interactive API**: `http://localhost:8000/docs`
 
 ---
 
-## 🧠 Intelligence Engine
-
-### Multimodal Fusion
-TradeIntellect doesn't just look at prices. It fuses data from three distinct sources:
-1.  **Quantitative**: 150+ days of historical OHLC data processed through an **LSTM (Long Short-Term Memory)** network.
-2.  **Qualitative**: Real-time news aggregation with **Sentiment Analysis** scores ranging from Bullish to Bearish.
-3.  **Technical**: Real-time calculation of **RSI, MACD, Bollinger Bands, ATR, and VWAP**.
-
-### Self-Healing Logic
-- **Symbol Auto-Correction**: Automatically maps NSE and BSE tickers (e.g., `TCS.NS`, `TCS.BO`) for cross-exchange arbitrage.
-- **Robustness**: API includes a `clean_nas` utility to handle incomplete market data without crashing the UI.
-- **Live Fallback**: If historical data is being backfilled, the system automatically falls back to **Live Quotes** for real-time visibility.
+## 📜 Maintenance
+The platform is designed to be **Zero-Touch**. 
+*   **Daily Sync**: Every time you run `run_app.py`, it automatically fills gaps for missing dates (e.g., after weekends).
+*   **News Rotation**: The background news service manages its own schedule to ensure 24/7 market coverage.
 
 ---
-
-## 🎨 UI/UX Features
-- **Global Terminal**: A sleek, dark-mode dashboard with neon accents.
-- **Dynamic Charts**: Interactive SVG charts with glassmorphism effects.
-- **Neural Health**: Live tracking of model accuracy (RMSE) and training status.
-- **Signal Confidence**: Real-time percentage-based confidence for AI signals.
-
----
-
-## 🛡️ License
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-*Built for Institutional-Grade Market Intelligence.*
+*Built with precision for the modern trader.*
