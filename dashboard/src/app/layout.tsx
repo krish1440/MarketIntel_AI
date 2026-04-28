@@ -27,7 +27,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <div className="flex-grow">{children}</div>
+        <footer className="border-t border-slate-900 bg-slate-950 py-8 text-center">
+          <p className="text-slate-500 text-sm tracking-widest font-medium">
+            Designed and developed by <span className="text-slate-300 font-bold">Krish Chaudhary</span>
+          </p>
+        </footer>
+      </body>
     </html>
   );
 }

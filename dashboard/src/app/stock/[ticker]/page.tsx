@@ -104,12 +104,12 @@ export default function StockDetail() {
     <main className="min-h-screen bg-slate-950 text-slate-50 p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-            <button onClick={() => router.back()} className="flex items-center text-slate-500 hover:text-white transition-all group">
+            <Link href="/market" className="flex items-center text-slate-500 hover:text-white transition-all group">
                 <div className="bg-slate-900 p-2 rounded-full mr-3 group-hover:bg-slate-800 transition-colors">
                     <ArrowLeft className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-bold uppercase tracking-widest">Global Terminal</span>
-            </button>
+                <span className="text-sm font-bold uppercase tracking-widest">Market Terminal</span>
+            </Link>
 
             <div className="bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 flex items-center gap-1">
                 {['NSE', 'BSE'].map(ex => (
