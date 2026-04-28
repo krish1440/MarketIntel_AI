@@ -102,23 +102,34 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* --- TECHNOLOGY SECTION --- */}
-      <section id="technology" className="py-32 px-8 max-w-7xl mx-auto">
+      {/* --- ADVANCED TECH CORE SUITE --- */}
+      <section id="technology" className="py-32 px-8 max-w-7xl mx-auto border-t border-white/5">
         <div className="text-center mb-20">
-          <h2 className="text-4xl font-black mb-4 tracking-tighter">The Tech Stack</h2>
-          <p className="text-slate-500 max-w-xl mx-auto">Built with industrial-grade tools for zero-latency intelligence.</p>
+          <h2 className="text-4xl font-black mb-4 tracking-tighter uppercase italic">The Neural Stack</h2>
+          <p className="text-slate-500 max-w-xl mx-auto text-sm font-medium">Engineered for extreme performance and deep-learning precision.</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
-            { name: 'FastAPI', type: 'Backend', color: 'emerald' },
-            { name: 'Next.js 14', type: 'Frontend', color: 'indigo' },
-            { name: 'PostgreSQL', type: 'Database', color: 'blue' },
-            { name: 'LSTM/AI', type: 'Intelligence', color: 'pink' }
+            { name: 'FastAPI', type: 'Backend', sub: 'High-Throughput API Engine', color: 'emerald', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { name: 'Next.js 14', type: 'Frontend', sub: 'Server-Side Intelligence', color: 'indigo', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+            { name: 'PostgreSQL', type: 'Database', sub: 'Relational Data Integrity', color: 'blue', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4' },
+            { name: 'LSTM/AI', type: 'Intelligence', sub: 'Neural Time-Series Prediction', color: 'pink', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0012 18.75c-1.03 0-1.9-.4-2.593-1.1l-.548-.547z' }
           ].map((t, i) => (
-            <div key={i} className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 text-center group hover:bg-white/[0.05] transition-all">
-               <div className={`w-2 h-2 rounded-full bg-${t.color}-500 mx-auto mb-4`}></div>
-               <h4 className="font-black text-lg">{t.name}</h4>
-               <p className="text-[10px] uppercase font-bold text-slate-600 tracking-widest">{t.type}</p>
+            <div key={i} className="group p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all relative overflow-hidden">
+                <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity`}>
+                    <svg className={`w-20 h-20 text-${t.color}-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={t.icon} />
+                    </svg>
+                </div>
+                <div className={`w-12 h-12 bg-${t.color}-500/10 rounded-2xl flex items-center justify-center mb-8 border border-${t.color}-500/20 shadow-lg shadow-${t.color}-500/5`}>
+                    <svg className={`w-6 h-6 text-${t.color}-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={t.icon} />
+                    </svg>
+                </div>
+                <h4 className="text-2xl font-black mb-1 tracking-tighter">{t.name}</h4>
+                <p className="text-[10px] uppercase font-black text-slate-500 tracking-widest mb-4 italic">{t.type}</p>
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">{t.sub}</p>
+                <div className={`mt-8 h-0.5 w-0 bg-${t.color}-500/50 group-hover:w-full transition-all duration-1000`}></div>
             </div>
           ))}
         </div>
