@@ -164,24 +164,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* --- STATS SECTION --- */}
-      <section className="py-32 px-8 max-w-7xl mx-auto border-t border-white/5 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
-          <div>
-            <div className="text-4xl font-black mb-1">2,300+</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600">Symbols</div>
-          </div>
-          <div>
-            <div className="text-4xl font-black mb-1">5Y</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600">History</div>
-          </div>
-          <div>
-            <div className="text-4xl font-black mb-1">1.6M+</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600">Data Points</div>
-          </div>
-          <div>
-            <div className="text-4xl font-black mb-1">24/7</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600">Monitoring</div>
-          </div>
+      {/* --- ADVANCED DATA INTELLIGENCE GRID --- */}
+      <section className="py-32 px-8 max-w-7xl mx-auto border-t border-white/5">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Market Symbols', val: '2,300+', sub: 'Full NSE/BSE Coverage', color: 'indigo' },
+            { label: 'Historical Depth', val: '5Y', sub: 'Institutional Archive', color: 'emerald' },
+            { label: 'Data Points', val: '1.6M+', sub: 'Neural Training Set', color: 'purple' },
+            { label: 'Active Monitoring', val: '24/7', sub: 'Real-time Pulse', color: 'rose' }
+          ].map((s, i) => (
+            <div key={i} className="group p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all relative overflow-hidden">
+                <div className={`absolute -bottom-4 -right-4 w-24 h-24 bg-${s.color}-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform`}></div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2">{s.label}</p>
+                <div className="text-5xl font-mono font-black tracking-tighter text-white mb-2">
+                    {s.val}
+                </div>
+                <p className="text-[10px] font-bold text-slate-600 uppercase italic tracking-wider">{s.sub}</p>
+                <div className={`mt-6 h-1 w-12 bg-${s.color}-500/30 rounded-full group-hover:w-full transition-all duration-700`}></div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* --- REPOSITORY SECTION --- */}
