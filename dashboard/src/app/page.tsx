@@ -43,7 +43,7 @@ export default function LandingPage() {
           </div>
           <div className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
             <Link href="#features" className="hover:text-white transition-colors">Technology</Link>
-            <Link href="#universe" className="hover:text-white transition-colors">Universe</Link>
+            <Link href="#spectrum" className="hover:text-white transition-colors">Spectrum</Link>
             <Link href="https://github.com/krish1440/MarketIntel_AI" target="_blank" className="hover:text-white transition-colors">Repository</Link>
             <Link href="/market" className="px-6 py-2 bg-white text-black rounded-full hover:bg-indigo-400 transition-all">Launch</Link>
           </div>
@@ -64,7 +64,7 @@ export default function LandingPage() {
           </h1>
           
           <p className="max-w-2xl mx-auto text-slate-400 text-lg md:text-xl mb-16 font-medium leading-relaxed">
-            Harnessing 5-year historical depth and AI-driven predictive modeling for the entire <span className="text-white underline decoration-indigo-500/50 underline-offset-4">Indian Equity Universe</span>.
+            Harnessing 5-year historical depth and AI-driven predictive modeling for the entire <span className="text-white underline decoration-indigo-500/50 underline-offset-4">Indian Market Spectrum</span>.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -103,7 +103,7 @@ export default function LandingPage() {
       </div>
 
       {/* --- ADVANCED FEATURES SECTION --- */}
-      <section id="features" className="py-32 px-8 max-w-7xl mx-auto">
+      <section id="spectrum" className="py-32 px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
                 { 
@@ -119,7 +119,7 @@ export default function LandingPage() {
                     color: "purple"
                 },
                 { 
-                    title: "Historical Deep", 
+                    title: "Total Spectrum", 
                     desc: "5-year comprehensive historical mapping. A massive data foundation for backtesting and long-term intelligence.",
                     icon: "M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4",
                     color: "emerald"
