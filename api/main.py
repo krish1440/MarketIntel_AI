@@ -33,26 +33,52 @@ def clean_nas(obj):
 predict_service = PredictionService()
 
 @app.get("/api/stocks")
-def list_stocks():
+def list_stocks(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    search: str = Query(None)
+):
     session = get_session()
-    stocks = session.query(Stock).all()
-    # Filter for unique tickers
-    unique_stocks = []
-    seen = set()
+    
+    # Base query
+    query = session.query(Stock)
+    
+    # Filter by search
+    if search:
+        query = query.filter(
+            (Stock.ticker.ilike(f"%{search}%")) | 
+            (Stock.name.ilike(f"%{search}%"))
+        )
+    
+    # Get total count for pagination
+    total = query.count()
+    
+    # Pagination
+    stocks = query.offset((page - 1) * limit).limit(limit).all()
+    
+    # Filter for unique tickers and attach prices
+    results = []
     for s in stocks:
-        if s.ticker not in seen:
-            # Get latest price for the dashboard list
-            latest = session.query(LiveQuote).filter_by(stock_id=s.id, exchange='NSE').order_by(LiveQuote.timestamp.desc()).first()
-            unique_stocks.append({
-                "id": s.id,
-                "ticker": s.ticker,
-                "name": s.name,
-                "price": float(latest.price) if latest else 0.0,
-                "change": float(latest.change_percent) if latest and latest.change_percent else 0.0
-            })
-            seen.add(s.ticker)
+        # Get latest NSE price
+        latest = session.query(LiveQuote).filter_by(
+            stock_id=s.id, exchange='NSE'
+        ).order_by(LiveQuote.timestamp.desc()).first()
+        
+        results.append({
+            "id": s.id,
+            "ticker": s.ticker,
+            "name": s.name,
+            "price": float(latest.price) if latest else 0.0,
+            "change": float(latest.change_percent) if latest and latest.change_percent else 0.0
+        })
+    
     session.close()
-    return clean_nas(unique_stocks)
+    return clean_nas({
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "stocks": results
+    })
 
 @app.get("/api/model-status")
 def get_model_status():
@@ -78,7 +104,55 @@ def get_history(ticker: str, exchange: str = "NSE", days: int = 30):
     ).order_by(HistoricalPrice.date.desc()).limit(days).all()
     
     session.close()
-    return clean_nas([{"date": h.date.isoformat(), "close": float(h.close)} for h in reversed(history) if h.close is not None and not (isinstance(h.close, float) and np.isnan(h.close))])
+    return clean_nas([{"date": h.date.isoformat(), "close": float(h.close)} for h in reversed(history) if h.close is not None and not np.isnan(float(h.close))])
+
+import feedparser
+import urllib.parse
+import datetime
+from bs4 import BeautifulSoup
+
+def fetch_and_save_news(session, ticker):
+    stock = session.query(Stock).filter_by(ticker=ticker).first()
+    if not stock: return 0
+    
+    query = f"{stock.ticker} share price news"
+    encoded_query = urllib.parse.quote(query)
+    rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-IN&gl=IN&ceid=IN:en"
+    
+    count = 0
+    try:
+        feed = feedparser.parse(rss_url)
+        # Get existing URLs to avoid duplicates
+        existing_urls = {u[0] for u in session.query(NewsArticle.url).filter_by(stock_id=stock.id).all()}
+        
+        for entry in feed.entries[:10]:
+            if entry.link not in existing_urls:
+                summary_text = ""
+                if hasattr(entry, 'summary'):
+                    soup = BeautifulSoup(entry.summary, 'html.parser')
+                    summary_text = soup.get_text()
+                
+                pub_date = datetime.datetime.now()
+                if hasattr(entry, 'published'):
+                    try:
+                        pub_date = datetime.datetime(*entry.published_parsed[:6])
+                    except: pass
+                
+                article = NewsArticle(
+                    stock_id=stock.id,
+                    title=entry.title,
+                    summary=summary_text[:500],
+                    url=entry.link,
+                    published_at=pub_date,
+                    sentiment_score=0.0
+                )
+                session.add(article)
+                count += 1
+        session.commit()
+    except Exception as e:
+        print(f"Error refreshing news for {ticker}: {e}")
+        session.rollback()
+    return count
 
 @app.get("/api/news/{ticker}")
 def get_news(ticker: str):
@@ -94,6 +168,13 @@ def get_news(ticker: str):
         "sentiment": float(n.sentiment_score) if n.sentiment_score else 0,
         "date": n.published_at.isoformat()
     } for n in news]
+
+@app.post("/api/news/refresh/{ticker}")
+def refresh_news(ticker: str):
+    session = get_session()
+    new_count = fetch_and_save_news(session, ticker)
+    session.close()
+    return {"new_articles": new_count}
 
 if __name__ == "__main__":
     import uvicorn
