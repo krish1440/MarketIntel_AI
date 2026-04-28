@@ -16,11 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MarketIntel AI | Total Market Intelligence",
   description: "Production-grade Indian stock market monitoring and prediction platform.",
-  icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
-  },
 };
 
 export default function RootLayout({
