@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Production-grade Indian stock market monitoring and prediction platform.",
   icons: {
     icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
 
