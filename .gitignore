@@ -13,8 +13,6 @@ env/
 venv/
 .DS_Store
 *.log
-
-# Kaggle Assets
 *.csv
 data_exports/
 kaggle_assets
