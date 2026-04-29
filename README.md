@@ -19,9 +19,9 @@ For a deep-dive into the neural orchestration and system blueprints, visit our:
 *   **Smart Discovery**: Automated symbol discovery engine that identifies new listings and updates.
 
 ### ⚡ Smart-Sync Data Pipeline
-*   **Delta Update Engine (New!)**: High-speed incremental fetching that only "patches" missing trading days (idempotent).
+*   **Delta Update Engine**: High-speed incremental fetching that only "patches" missing trading days (idempotent).
 *   **Fast Batch Ingestion**: Uses a high-speed 50-stock batch fetching method (5-year history backfill).
-*   **Real-Time Poller**: Multi-threaded 100-stock chunk polling ensures the entire market is tracked every minute.
+*   **Real-Time Poller**: Multi-threaded chunk polling ensures the entire market is tracked every minute.
 
 ### 🧠 AI-Driven Intelligence
 *   **Transformers Sentiment**: Real-time news analysis using **DistilBERT** to generate market mood scores (-1.0 to 1.0) for every headline.
@@ -30,56 +30,65 @@ For a deep-dive into the neural orchestration and system blueprints, visit our:
 
 ---
 
-## 🛠️ Technology Stack
-*   **Frontend**: Next.js 14, Tailwind CSS, Lucide Icons.
-*   **Backend**: FastAPI, SQLAlchemy (PostgreSQL).
-*   **Intelligence**: PyTorch (CPU-Optimized), Transformers (Hugging Face).
-*   **Database**: PostgreSQL (Dockerized) with 4.5M+ historical records.
-*   **Ingestion**: Python, FeedParser, BeautifulSoup4, yFinance.
+## 🏗️ Detailed Project Intelligence Map
+
+### 📂 Root: The Command Center
+*   **`run_app.py`**: The **Master Orchestrator**. It manages service lifecycle, starts the Docker DB, performs automated syncs, and launches the API/Dashboard in parallel.
+*   **`docker-compose.yml`**: Configures the **PostgreSQL 15** environment with persistent volume mapping for 4.5M+ records.
+*   **`requirements.txt`**: Strict dependency manifest (Torch-CPU, Transformers, FastAPI, Pandas).
+*   **`.gitignore`**: High-performance filtering (ignores `venv/`, large `.csv` exports, and `.pyc` caches).
+
+### 📂 `/api`: The Intelligence Gateway
+*   **`main.py`**: The central REST API. Handles fuzzy search, historical snapshots, and real-time neural refresh triggers.
+*   **`ARCHITECT_HANDBOOK.md`**: Advanced technical guide for the API logic and neural junction points.
+
+### 📂 `/ingestion`: The Data Heartbeat
+*   **`delta_update.py`**: The smart-sync engine. It calculates "data holes" and patches them using a differential-ingestion algorithm.
+*   **`news_aggregator.py`**: A rotational scraper that uses **AI Transformers** to analyze news sentiment as it arrives.
+*   **`poll_prices.py`**: High-frequency tracker that updates live price snapshots every 60 seconds.
+*   **`backfill_history.py`**: Heavy-duty engine for initial 5-year historical data seeding.
+*   **`discover_symbols.py`**: The "Mapmaker"—identifies every tradable symbol on the NSE and BSE.
+
+### 📂 `/intelligence`: Prediction Services
+*   **`prediction_service.py`**: The bridge between the database and the LSTM model. Handles OHLCV windowing and feature scaling.
+
+### 📂 `/models`: Neural Weights & Logic
+*   **`sentiment_model.py`**: Implementation of the **DistilBERT** classifier for financial text analysis.
+*   **`train_price.py`**: The training script for the LSTM model using PyTorch.
+
+### 📂 `/db`: Persistence Layer
+*   **`schema.py`**: The **SQLAlchemy** blueprint. Defines the relational structure for Stocks, Prices, Quotes, and News.
+
+### 📂 `/scripts`: Production Utilities
+*   **`smart_export.py`**: Our custom additive export engine. It appends rows to history and merges columns into the price matrix.
+*   **`export_kaggle.py`**: Standard full-export utility for fresh dataset initialization.
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-*   Python 3.10+
-*   Docker & Docker Compose
-*   Node.js & npm
+*   Python 3.10+ | Docker & Docker Compose | Node.js & npm
 
 ### 2. One-Command Setup
-MarketIntel AI uses a **Master Orchestrator** to handle everything. You do not need to run individual scripts.
-
 ```powershell
 python run_app.py
 ```
 
-### 3. What happens next?
-*   **Docker DB**: Starts automatically.
-*   **Market Discovery**: Seeds all 2,300+ stocks if the DB is empty.
-*   **Smart Sync**: Automatically fetches missing history (since last run) for all stocks.
-*   **Live Services**: Launches the API, Poller, News Engine, and Dashboard in separate windows.
+### 3. Life-Cycle
+*   **Sync**: Every run fills the "weekend gap" automatically.
+*   **News**: Background services manage rotation to avoid provider bans.
 
 ---
 
-## 📁 Detailed Project Structure
-
-### 🛠️ Core Directories
-*   **`/api`**: The backend brain. Powered by **FastAPI**, serving real-time stock data and neural insights. (See **ARCHITECT_HANDBOOK.md** for API Reference).
-*   **`/dashboard`**: The visual command center. A **Next.js 14** application with a premium UI.
-*   **`/db`**: Database layer. Contains **SQLAlchemy** schema definitions and connection logic.
-*   **`/ingestion`**: The data pipeline hub.
-    *   `delta_update.py`: Smart-Sync engine for incremental data patching.
-    *   `news_aggregator.py`: Rotational engine with integrated **AI Sentiment Scoring**.
-    *   `poll_prices.py`: Live price tracker.
-*   **`/scripts`**: Production utilities.
-    *   `smart_export.py`: High-performance additive export engine for Kaggle (Rows & Columns).
+## 📊 Dashboard Access
+*   **Institutional Dashboard**: `http://localhost:3000`
+*   **Intelligence API (Swagger)**: `http://localhost:8000/docs`
 
 ---
 
-## 📜 Maintenance
-The platform is designed to be **Zero-Touch**. 
-*   **Daily Sync**: Every time you run `run_app.py`, it automatically fills gaps for missing dates.
-*   **News Rotation**: The background news service manages its own schedule to ensure 24/7 market coverage.
+## 📜 License
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ---
 *Built with precision for the modern trader.*
