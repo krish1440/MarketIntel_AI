@@ -1,3 +1,12 @@
+"""
+MarketIntel AI: Legacy Kaggle Export Engine
+===========================================
+This module handles the full-scale export of the stock market database into 
+Kaggle-compliant CSV formats. It supports both 'Long Format' (OHLCV) and 
+'Wide Format' (Time-Series Matrix).
+
+Note: This engine performs full re-exports. For incremental updates, see 'smart_export.py'.
+"""
 import sys
 import os
 import csv
@@ -8,7 +17,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, HistoricalPrice, Stock
 
 def export_to_kaggle_long(session, export_dir):
-    """Exports full OHLCV data in Long Format (one row per date per stock)."""
+    """
+    Exports full OHLCV data in Long Format (one row per date per stock).
+
+    This function uses a memory-efficient batching strategy to process millions 
+    of records without overloading the system RAM. It maps database IDs back 
+    to tickers in real-time.
+
+    Args:
+        session (sqlalchemy.orm.Session): The active database session.
+        export_dir (str): The destination directory for the generated CSV.
+
+    Returns:
+        None: The output is written directly to the filesystem.
+    """
     filename = os.path.join(export_dir, "indian_stocks_all_history.csv")
     print(f"\n[INFO] Exporting LONG Format (OHLCV)...")
     

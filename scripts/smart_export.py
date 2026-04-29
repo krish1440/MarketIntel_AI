@@ -1,13 +1,16 @@
 """
 MarketIntel AI: Smart Additive Export Engine
 ============================================
-Handles the high-performance export of institutional datasets for Kaggle. 
-Implements 'Additive Logic' to minimize disk I/O and DB overhead.
+Handles high-performance, incremental exports of institutional datasets 
+for Kaggle. Implements 'Additive Logic' to minimize disk I/O and DB overhead.
 
-Logic Streams:
+Operational Streams:
 1. Long Format (OHLCV): Reads last file date and appends only newer rows.
 2. Wide Format (Matrix): Uses Pandas to merge new date columns into 
    the existing historical price grid.
+
+This engine is designed for daily production use, reducing export time 
+from minutes to seconds.
 """
 import sys
 import os
@@ -21,7 +24,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, HistoricalPrice, Stock
 
 def smart_export_long(session, export_dir):
-    """Additive export for Long Format: Appends only new rows since the last date in the CSV."""
+    """
+    Additive export for Long Format: Appends only new rows since the last date in the CSV.
+
+    This function performs a 'tail-read' on the existing CSV to identify the 
+    most recent record, then queries the database for all subsequent entries 
+    to append them in a single I/O operation.
+
+    Args:
+        session (sqlalchemy.orm.Session): The active database session.
+        export_dir (str): The destination directory for the generated CSV.
+
+    Returns:
+        None: The output is appended directly to the existing file.
+    """
     filename = os.path.join(export_dir, "indian_stocks_all_history.csv")
     
     last_date = None
@@ -65,7 +81,20 @@ def smart_export_long(session, export_dir):
         print(f"[SUCCESS] Long Format: Appended {len(new_records)} new records.")
 
 def smart_export_wide(session, export_dir):
-    """Additive export for Wide Format: Adds new date columns to the existing matrix."""
+    """
+    Additive export for Wide Format: Adds new date columns to the existing matrix.
+
+    Uses Pandas to load the existing time-series grid and dynamically 
+    introduces new date columns by mapping database price points 
+    to existing stock/exchange identifiers.
+
+    Args:
+        session (sqlalchemy.orm.Session): The active database session.
+        export_dir (str): The destination directory for the generated CSV.
+
+    Returns:
+        None: The output is saved back to the matrix file.
+    """
     filename = os.path.join(export_dir, "indian_stocks_time_series_matrix.csv")
     
     if not os.path.exists(filename):
