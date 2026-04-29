@@ -1,3 +1,15 @@
+"""
+MarketIntel AI: Smart Delta Sync Engine
+=======================================
+Implements high-speed, incremental data ingestion for the stock universe. 
+Unlike standard backfills, this engine identifies 'data holes'—the gap 
+between the last recorded trade and today—and patches them differentially.
+
+Key Features:
+- Differential 'Catch-up' logic (saves bandwidth/time).
+- Batch-Processing with Cooling Periods (respects YFinance Rate Limits).
+- Automatic database connection management.
+"""
 import yfinance as yf
 import datetime
 import time

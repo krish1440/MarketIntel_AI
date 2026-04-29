@@ -1,3 +1,9 @@
+"""
+MarketIntel AI: High-Performance Neural Gateway
+===============================================
+Central REST API for the MarketIntel ecosystem. Orchestrates data flow 
+between PostgreSQL, the LSTM Prediction Engine, and the Sentiment Expert.
+"""
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import sys

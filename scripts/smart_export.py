@@ -1,3 +1,14 @@
+"""
+MarketIntel AI: Smart Additive Export Engine
+============================================
+Handles the high-performance export of institutional datasets for Kaggle. 
+Implements 'Additive Logic' to minimize disk I/O and DB overhead.
+
+Logic Streams:
+1. Long Format (OHLCV): Reads last file date and appends only newer rows.
+2. Wide Format (Matrix): Uses Pandas to merge new date columns into 
+   the existing historical price grid.
+"""
 import sys
 import os
 import csv
