@@ -45,6 +45,7 @@ export default function Home() {
                 placeholder="Search symbol or name..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                suppressHydrationWarning
                 className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3 px-12 focus:outline-none focus:border-indigo-500/50 transition-all text-sm"
               />
               <svg className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

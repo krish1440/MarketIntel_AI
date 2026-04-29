@@ -11,6 +11,7 @@ import urllib.parse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.schema import get_session, Stock, NewsArticle
+from models.sentiment_model import get_sentiment_score
 
 # Global cache of URLs to avoid DB lookups
 processed_urls = set()
@@ -37,13 +38,20 @@ def save_article(session, stock_id, entry):
             pub_date = datetime.datetime(*entry.published_parsed[:6])
         except: pass
         
+    # Calculate AI Sentiment Score
+    text_to_analyze = f"{entry.title}. {summary_text[:200]}"
+    try:
+        score = get_sentiment_score(text_to_analyze)
+    except:
+        score = 0.0
+
     article = NewsArticle(
         stock_id=stock_id,
         title=entry.title,
         summary=summary_text[:500],
         url=entry.link,
         published_at=pub_date,
-        sentiment_score=0.0 # To be updated by sentiment engine
+        sentiment_score=score
     )
     session.add(article)
     processed_urls.add(entry.link)

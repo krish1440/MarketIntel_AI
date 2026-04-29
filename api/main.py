@@ -138,13 +138,21 @@ def fetch_and_save_news(session, ticker):
                         pub_date = datetime.datetime(*entry.published_parsed[:6])
                     except: pass
                 
+                # Calculate AI Sentiment
+                text_to_analyze = f"{entry.title}. {summary_text[:200]}"
+                try:
+                    from models.sentiment_model import get_sentiment_score
+                    score = get_sentiment_score(text_to_analyze)
+                except:
+                    score = 0.0
+
                 article = NewsArticle(
                     stock_id=stock.id,
                     title=entry.title,
                     summary=summary_text[:500],
                     url=entry.link,
                     published_at=pub_date,
-                    sentiment_score=0.0
+                    sentiment_score=score
                 )
                 session.add(article)
                 count += 1
