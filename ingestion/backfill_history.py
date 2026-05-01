@@ -1,3 +1,21 @@
+"""
+MARKETINTEL AI: HISTORICAL BACKFILL ENGINE
+==========================================
+
+This module is responsible for the initial deep-seeding of the database with 
+multi-year historical price data. It handles batch-fetching of OHLCV data 
+from Yahoo Finance for the entire stock universe.
+
+Key Features:
+- 5-Year Historical Fetching.
+- Multi-threaded Batch Processing (Chunked).
+- Exchange-Specific Mapping (NSE/BSE).
+- Duplication Prevention via Date Filtering.
+
+Maintainer: MarketIntel AI Data Engineering
+Version: 1.2.0
+"""
+
 import yfinance as yf
 import datetime
 import time
@@ -11,6 +29,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, HistoricalPrice
 
 def backfill_stock_exchange(session, stock, symbol, exchange, period="5y"):
+    """Performs a historical backfill for a single stock on a specific exchange.
+    
+    Args:
+        session: The SQLAlchemy database session.
+        stock: The Stock ORM object.
+        symbol: The exchange-specific symbol (e.g., RELIANCE.NS).
+        exchange: The exchange name ('NSE' or 'BSE').
+        period: The lookback period (default '5y').
+    """
     if not symbol: return
     
     # Get all existing dates for this stock/exchange to avoid duplicates
@@ -65,6 +92,7 @@ def backfill_stock_exchange(session, stock, symbol, exchange, period="5y"):
         session.rollback()
 
 def main():
+    """Main orchestrator for the historical backfill process."""
     session = get_session()
     stocks = session.query(Stock).all()
     
@@ -132,7 +160,7 @@ def main():
                         print(f"  Added {len(new_records)} records for {stock.ticker}", flush=True)
             
             session.commit()
-            time.sleep(2) # Grace period between batches
+            time.sleep(2) # Grace period between batches to prevent rate limits
             
         except Exception as e:
             print(f"Error in batch: {e}", flush=True)
@@ -194,7 +222,7 @@ def main():
                         print(f"  Added {len(new_records)} records for {stock.ticker} (BSE)", flush=True)
             
             session.commit()
-            time.sleep(2)
+            time.sleep(2) # Grace period
             
         except Exception as e:
             print(f"Error in BSE batch: {e}", flush=True)
@@ -205,3 +233,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
