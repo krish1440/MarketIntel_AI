@@ -1,3 +1,21 @@
+"""
+MARKETINTEL AI: REAL-TIME NEWS AGGREGATOR
+=========================================
+
+This module implements a sophisticated news scraping and analysis engine. 
+It monitors global financial news via RSS, maps headlines to specific stock 
+assets, and performs real-time AI sentiment analysis using DistilBERT.
+
+Key Features:
+- Dual-Mode Fetching (Broad Market vs. Ticker-Specific).
+- Real-Time AI Sentiment Analysis (-1.0 to 1.0).
+- Anti-Ban Protection (Randomized Jitter & Rotational Fetching).
+- URL Idempotency Cache to minimize database overhead.
+
+Maintainer: MarketIntel AI Intelligence Team
+Version: 1.1.0
+"""
+
 import feedparser
 import datetime
 import sys
@@ -13,10 +31,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, NewsArticle
 from models.sentiment_model import get_sentiment_score
 
-# Global cache of URLs to avoid DB lookups
+# Global cache of URLs to avoid redundant DB lookups in high-frequency loops
 processed_urls = set()
 
 def load_url_cache(session):
+    """Populates the in-memory URL cache from the database.
+    
+    Args:
+        session: The SQLAlchemy database session.
+    """
     global processed_urls
     print("Loading news URL cache...", flush=True)
     urls = session.query(NewsArticle.url).all()
@@ -24,6 +47,16 @@ def load_url_cache(session):
     print(f"Cache loaded with {len(processed_urls)} articles.", flush=True)
 
 def save_article(session, stock_id, entry):
+    """Processes and persists a single news article entry.
+    
+    Args:
+        session: The SQLAlchemy database session.
+        stock_id: The ID of the related stock.
+        entry: The feedparser entry object.
+        
+    Returns:
+        Boolean indicating if the article was newly saved.
+    """
     if entry.link in processed_urls:
         return False
         
@@ -38,7 +71,7 @@ def save_article(session, stock_id, entry):
             pub_date = datetime.datetime(*entry.published_parsed[:6])
         except: pass
         
-    # Calculate AI Sentiment Score
+    # Calculate AI Sentiment Score in real-time
     text_to_analyze = f"{entry.title}. {summary_text[:200]}"
     try:
         score = get_sentiment_score(text_to_analyze)
@@ -58,7 +91,12 @@ def save_article(session, stock_id, entry):
     return True
 
 def fetch_broad_market_news(session, stocks):
-    """Fetches general Indian market news and maps headlines to specific stocks"""
+    """Fetches general Indian market news and maps headlines to specific stocks.
+    
+    Args:
+        session: The SQLAlchemy database session.
+        stocks: List of Stock ORM objects to scan for.
+    """
     print("Fetching broad market headlines...", flush=True)
     rss_urls = [
         "https://news.google.com/rss/search?q=NSE+BSE+Stock+Market+India&hl=en-IN&gl=IN&ceid=IN:en",
@@ -70,7 +108,7 @@ def fetch_broad_market_news(session, stocks):
         try:
             feed = feedparser.parse(url)
             for entry in feed.entries:
-                # Logic: If headline mentions a stock ticker or name, link it
+                # Mapping Logic: If headline mentions a ticker or name, link it
                 for stock in stocks:
                     if stock.ticker in entry.title or stock.name.split(' ')[0] in entry.title:
                         if save_article(session, stock.id, entry):
@@ -82,7 +120,12 @@ def fetch_broad_market_news(session, stocks):
     print(f"  Mapped {new_count} broad articles to specific stocks.", flush=True)
 
 def fetch_specific_news(session, stock):
-    """Fetches targeted news for a specific stock ticker"""
+    """Fetches targeted news for a specific stock ticker.
+    
+    Args:
+        session: The SQLAlchemy database session.
+        stock: The Stock ORM object.
+    """
     query = f"{stock.ticker} share price news"
     encoded_query = urllib.parse.quote(query)
     rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en-IN&gl=IN&ceid=IN:en"
@@ -90,7 +133,7 @@ def fetch_specific_news(session, stock):
     try:
         feed = feedparser.parse(rss_url)
         count = 0
-        for entry in feed.entries[:5]: # Take top 5 latest
+        for entry in feed.entries[:5]: # Take top 5 latest results
             if save_article(session, stock.id, entry):
                 count += 1
         session.commit()
@@ -101,6 +144,7 @@ def fetch_specific_news(session, stock):
         session.rollback()
 
 def main():
+    """Main loop for the News Aggregation engine."""
     session = get_session()
     load_url_cache(session)
     
@@ -112,10 +156,10 @@ def main():
     print(f"News Engine Started for {len(stocks)} stocks.", flush=True)
     
     while True:
-        # 1. Broad Discovery (Every loop)
+        # 1. Broad Discovery (Runs every loop for overall market mood)
         fetch_broad_market_news(session, stocks)
         
-        # 2. Shuffled Specific Discovery
+        # 2. Shuffled Specific Discovery (Deep dive into individual tickers)
         shuffled_stocks = list(stocks)
         random.shuffle(shuffled_stocks)
         
@@ -127,7 +171,7 @@ def main():
                 
             fetch_specific_news(session, stock)
             
-            # Anti-Ban Protection
+            # Anti-Ban Protection: Randomized delay
             time.sleep(random.uniform(2, 5))
             
         print("🔄 Full cycle complete. Resting for 10 minutes...", flush=True)
@@ -135,3 +179,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
