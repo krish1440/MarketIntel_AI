@@ -1,15 +1,20 @@
 """
-MarketIntel AI: Smart Delta Sync Engine
+MARKETINTEL AI: SMART DELTA SYNC ENGINE
 =======================================
-Implements high-speed, incremental data ingestion for the stock universe. 
-Unlike standard backfills, this engine identifies 'data holes'—the gap 
+
+This module implements high-speed, incremental data ingestion for the stock 
+universe. Unlike standard backfills, this engine identifies 'data holes'—the gap 
 between the last recorded trade and today—and patches them differentially.
 
 Key Features:
 - Differential 'Catch-up' logic (saves bandwidth/time).
 - Batch-Processing with Cooling Periods (respects YFinance Rate Limits).
 - Automatic database connection management.
+
+Maintainer: MarketIntel AI Data Engineering
+Version: 1.1.0
 """
+
 import yfinance as yf
 import datetime
 import time
@@ -23,10 +28,23 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, HistoricalPrice
 
 def chunk_list(lst, n):
+    """Splits a list into smaller chunks of size n.
+    
+    Args:
+        lst: The list to be split.
+        n: The maximum size of each chunk.
+    """
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
 def update_exchange(session, stocks, exchange_type):
+    """Identifies and fills missing price data for a set of stocks on an exchange.
+    
+    Args:
+        session: The SQLAlchemy database session.
+        stocks: List of Stock ORM objects to check.
+        exchange_type: The exchange name ('NSE' or 'BSE').
+    """
     symbol_attr = 'nse_symbol' if exchange_type == 'NSE' else 'bse_symbol'
     stocks_to_update = [s for s in stocks if getattr(s, symbol_attr)]
     
@@ -40,7 +58,7 @@ def update_exchange(session, stocks, exchange_type):
         tickers = [getattr(s, symbol_attr) for s in chunk]
         try:
             print(f"  [SYNC] Fetching chunk of {len(tickers)} tickers...")
-            # We fetch 5 days to cover weekends
+            # We fetch 5 days to cover weekends and holidays
             data = yf.download(tickers, period="5d", interval="1d", progress=False, group_by='ticker')
             
             if data.empty: 
@@ -95,6 +113,7 @@ def update_exchange(session, stocks, exchange_type):
             time.sleep(5) # Longer cooling period on error
 
 def main():
+    """Main orchestrator for the Delta sync process."""
     session = get_session()
     stocks = session.query(Stock).all()
     
@@ -107,3 +126,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
