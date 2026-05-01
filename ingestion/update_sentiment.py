@@ -56,4 +56,3 @@ def update_sentiment():
 
 if __name__ == "__main__":
     update_sentiment()
-
