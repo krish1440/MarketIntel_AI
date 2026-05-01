@@ -22,6 +22,11 @@ import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.schema import get_session, HistoricalPrice, Stock
+from dotenv import load_dotenv
+
+# Load credentials from .env
+load_dotenv()
+
 
 def smart_export_long(session, export_dir):
     """
@@ -98,11 +103,45 @@ def smart_export_wide(session, export_dir):
     filename = os.path.join(export_dir, "indian_stocks_time_series_matrix.csv")
     
     if not os.path.exists(filename):
-        print("[INFO] Wide Format: No existing matrix found. Rebuilding full matrix...")
-        # Fallback to full logic (simplified)
-        from scripts.export_kaggle import export_to_kaggle_wide
-        export_to_kaggle_wide(session, export_dir)
+        print("[INFO] Wide Format: No existing matrix found. Rebuilding full matrix from DB...")
+        
+        # 1. Get all dates and stocks
+        all_dates = [d[0].isoformat() for d in session.query(HistoricalPrice.date).distinct().order_by(HistoricalPrice.date.asc()).all()]
+        stocks = session.query(Stock.ticker, Stock.id).all()
+        
+        # 2. Initialize matrix
+        data = []
+        for ticker, s_id in stocks:
+            # We need exchange too, so let's get unique (ticker, exchange) pairs
+            exchanges = [e[0] for e in session.query(HistoricalPrice.exchange).filter(HistoricalPrice.stock_id == s_id).distinct().all()]
+            for ex in exchanges:
+                data.append({'ticker': ticker, 'exchange': ex})
+        
+        df_matrix = pd.DataFrame(data)
+        
+        # 3. Fill dates (initially empty)
+        for d_str in all_dates:
+            df_matrix[d_str] = ""
+            
+        # 4. Fill prices
+        prices = session.query(Stock.ticker, HistoricalPrice.exchange, HistoricalPrice.date, HistoricalPrice.close)\
+                        .join(HistoricalPrice).all()
+        
+        # Pivot manually or via dict for speed
+        price_dict = {}
+        for t, ex, d, c in prices:
+            price_dict[(t, ex, d.isoformat())] = float(c) if c is not None else ""
+            
+        def get_price(row, date_str):
+            return price_dict.get((row['ticker'], row['exchange'], date_str), "")
+            
+        for d_str in all_dates:
+            df_matrix[d_str] = df_matrix.apply(lambda r: get_price(r, d_str), axis=1)
+            
+        df_matrix.to_csv(filename, index=False)
+        print(f"[SUCCESS] Wide Format: Full matrix rebuilt with {len(all_dates)} dates.")
         return
+
 
     print("[SMART] Wide Format: Loading existing matrix to add new columns...")
     df_matrix = pd.read_csv(filename)
@@ -135,6 +174,60 @@ def smart_export_wide(session, export_dir):
     df_matrix.to_csv(filename, index=False)
     print(f"[SUCCESS] Wide Format: Added {len(new_dates)} columns and saved.")
 
+import json
+import subprocess
+
+def push_to_kaggle(export_dir):
+    """
+    Automates the Kaggle dataset versioning process.
+    """
+    print("\n[KAGGLE] Preparing to push to Kaggle...")
+    
+    # 1. Create/Update metadata
+    metadata = {
+        "id": "krishchaudhary14/indian-stock-market-full-5-year-history",
+        "title": "Indian Stock Market: Full 5-Year History",
+        "licenses": [{"name": "CC0-1.0"}]
+    }
+    
+    metadata_path = os.path.join(export_dir, "dataset-metadata.json")
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    print(f"[KAGGLE] Metadata generated at {metadata_path}")
+    
+    # 2. Find Kaggle Executable (Windows specific fix)
+    kaggle_exe = "kaggle"
+    if os.name == 'nt':
+        # Try to find it in common Python Scripts folders if 'kaggle' fails
+        scripts_path = os.path.join(os.environ.get('APPDATA', ''), 'Python', 'Python312', 'Scripts', 'kaggle.exe')
+        local_scripts = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Programs', 'Python', 'Python312', 'Scripts', 'kaggle.exe')
+        
+        if os.path.exists(local_scripts):
+            kaggle_exe = local_scripts
+        elif os.path.exists(scripts_path):
+            kaggle_exe = scripts_path
+            
+    # 3. Push Version
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        message = f"Daily Automated Market Update ({timestamp})"
+        
+        print(f"[KAGGLE] Pushing new version using: {kaggle_exe}")
+        result = subprocess.run(
+            [kaggle_exe, "datasets", "version", "-p", export_dir, "-m", message],
+            capture_output=True, text=True
+        )
+        
+        if result.returncode == 0:
+            print(f"[SUCCESS] Kaggle Dataset updated successfully!")
+            print(result.stdout)
+        else:
+            print(f"[ERROR] Kaggle Upload failed: {result.stderr}")
+            
+    except Exception as e:
+        print(f"[ERROR] Unexpected error during Kaggle push: {e}")
+
+
 def main():
     session = get_session()
     export_dir = "data_exports"
@@ -147,7 +240,12 @@ def main():
     
     duration = (datetime.datetime.now() - start_time).total_seconds()
     print(f"\n[SUCCESS] SMART EXPORT COMPLETE in {duration:.2f} seconds.")
+    
+    # Auto-Upload to Kaggle
+    push_to_kaggle(export_dir)
+    
     session.close()
 
 if __name__ == "__main__":
     main()
+

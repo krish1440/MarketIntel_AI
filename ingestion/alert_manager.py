@@ -60,8 +60,9 @@ class AlertManager:
         )
         self.session.add(alert)
         self.session.commit()
-        print(f"🔔 ALERT TRIGGERED: {message}")
+        print(f"ALERT TRIGGERED: {message}")
         return True
+
 
     def check_price_alerts(self, stock_id, current_price, ticker):
         """Checks if the current price violates any watchlist thresholds.
@@ -81,13 +82,14 @@ class AlertManager:
 
         # Check Price Above
         if watchlist.target_price_above and current_price >= watchlist.target_price_above:
-            msg = f"🚀 {ticker} Breakout! Price ₹{current_price:.2f} is above target ₹{watchlist.target_price_above:.2f}"
+            msg = f"[BREAKOUT] {ticker} Price {current_price:.2f} is above target {watchlist.target_price_above:.2f}"
             self.trigger_alert(stock_id, 'PRICE_ABOVE', msg, current_price)
 
         # Check Price Below
         if watchlist.target_price_below and current_price <= watchlist.target_price_below:
-            msg = f"📉 {ticker} Breakdown! Price ₹{current_price:.2f} is below support ₹{watchlist.target_price_below:.2f}"
+            msg = f"[BREAKDOWN] {ticker} Price {current_price:.2f} is below support {watchlist.target_price_below:.2f}"
             self.trigger_alert(stock_id, 'PRICE_BELOW', msg, current_price)
+
 
     def check_sentiment_alerts(self, stock_id, sentiment_score, ticker):
         """Checks if a new sentiment score violates watchlist thresholds.
@@ -107,8 +109,9 @@ class AlertManager:
 
         if abs(sentiment_score) >= watchlist.sentiment_threshold:
             sentiment_type = "BULLISH" if sentiment_score > 0 else "BEARISH"
-            msg = f"🧠 {ticker} Neural Sentiment Spike! {sentiment_type} score of {sentiment_score:.4f} detected."
+            msg = f"[SENTIMENT] {ticker} Neural Sentiment Spike! {sentiment_type} score of {sentiment_score:.4f} detected."
             self.trigger_alert(stock_id, 'SENTIMENT_SPIKE', msg, sentiment_score)
+
 
     def close(self):
         """Closes the database session."""

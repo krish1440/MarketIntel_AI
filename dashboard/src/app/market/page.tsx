@@ -1,26 +1,66 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getStocks } from '@/lib/api';
+import { getStocks, getWatchlist, addToWatchlist, removeFromWatchlist } from '@/lib/api';
 import Link from 'next/link';
+import WatchlistModal from '../components/WatchlistModal';
 
 export default function Home() {
   const [stocks, setStocks] = useState<any[]>([]);
+  const [watchlist, setWatchlist] = useState<number[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeStock, setActiveStock] = useState<any>(null);
 
   const limit = 50; // Grid-friendly limit
 
+  const fetchWatchlist = () => {
+    getWatchlist().then(data => {
+      if (Array.isArray(data)) {
+        setWatchlist(data.map((item: any) => item.id));
+      } else {
+        setWatchlist([]);
+      }
+    });
+  };
+
   useEffect(() => {
     setLoading(true);
+    fetchWatchlist();
     getStocks(page, limit, search).then(data => {
       setStocks(data.stocks || []);
       setTotal(data.total || 0);
       setLoading(false);
     });
   }, [page, search]);
+
+  const handleWatchClick = (e: any, stock: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveStock(stock);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveWatchlist = async (targets: any) => {
+    if (!activeStock) return;
+    await addToWatchlist(activeStock.id, targets.above, targets.below, targets.sentiment);
+    setIsModalOpen(false);
+    fetchWatchlist();
+  };
+
+  const handleRemoveWatchlist = async () => {
+    if (!activeStock) return;
+    await removeFromWatchlist(activeStock.id);
+    setIsModalOpen(false);
+    fetchWatchlist();
+  };
+
+
 
   const totalPages = Math.ceil(total / limit);
 
@@ -77,13 +117,25 @@ export default function Home() {
                   className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-5 backdrop-blur-xl hover:border-indigo-500/30 transition-all cursor-pointer group hover:bg-slate-900/60"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold group-hover:text-indigo-400 transition-colors tracking-tight">{stock.ticker}</h3>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold group-hover:text-indigo-400 transition-colors tracking-tight">{stock.ticker}</h3>
+                        <button 
+                          onClick={(e) => handleWatchClick(e, stock)}
+                          className={`p-1 rounded-md transition-all ${watchlist.includes(stock.id) ? 'text-rose-500 bg-rose-500/10' : 'text-slate-600 hover:text-slate-300'}`}
+                        >
+
+                          <svg className="w-3.5 h-3.5" fill={watchlist.includes(stock.id) ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </button>
+                      </div>
                       <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mt-0.5 truncate max-w-[120px]">{stock.name}</p>
                     </div>
                     <div className={`px-1.5 py-0.5 rounded text-[9px] font-black ${stock.change >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
                       {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
                     </div>
+
                   </div>
                   
                   <div className="flex items-baseline justify-between mt-4">
@@ -131,7 +183,19 @@ export default function Home() {
             )}
           </>
         )}
+
+        {activeStock && (
+          <WatchlistModal 
+            stock={activeStock}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleSaveWatchlist}
+            onRemove={handleRemoveWatchlist}
+            isWatched={watchlist.includes(activeStock.id)}
+          />
+        )}
       </div>
     </main>
+
   );
 }

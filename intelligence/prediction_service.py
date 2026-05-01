@@ -1,25 +1,38 @@
 import sys
 import os
 import pandas as pd
-import torch
 import datetime
 import numpy as np
+
+# Global flag for AI capability
+TORCH_AVAILABLE = False
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: AI Prediction stack (Torch) failed to load: {e}")
 
 # Add parent directory to path for db and model imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.schema import get_session, Stock, HistoricalPrice, NewsArticle
 from models.preprocess import calculate_technical_indicators, prepare_lstm_data, to_torch
-from models.fusion_model import MultimodalFusion
 
 class PredictionService:
     def __init__(self):
-        # Initialize fusion model with 5 features (expanded from 4)
-        self.fusion = MultimodalFusion(
-            lstm_input_dim=5, 
-            lstm_checkpoint='models/checkpoints/price_model.pth',
-            xgb_checkpoint='models/checkpoints/fusion_model.json'
-        )
+        self.fusion = None
+        if TORCH_AVAILABLE:
+            try:
+                from models.fusion_model import MultimodalFusion
+                # Initialize fusion model with 5 features
+                self.fusion = MultimodalFusion(
+                    lstm_input_dim=5, 
+                    lstm_checkpoint='models/checkpoints/price_model.pth',
+                    xgb_checkpoint='models/checkpoints/fusion_model.json'
+                )
+            except Exception as e:
+                print(f"Warning: Fusion model initialization failed: {e}")
+
 
     def get_signal(self, ticker, exchange="NSE"):
         session = get_session()
@@ -79,12 +92,17 @@ class PredictionService:
             atr = clean(latest['ATR_14'])
             vwap = clean(latest['VWAP'])
 
-            # 4. Fusion Prediction
-            features = self.fusion.extract_features(last_sequence, sent_scores)
-            pred, confidence = self.fusion.predict(features, rsi=rsi)
-            
-            signal = "BUY" if pred == 1 else "SELL"
-            if confidence < 0.6: signal = "HOLD"
+            # 4. Signal Generation (Fusion vs Fallback)
+            if self.fusion and TORCH_AVAILABLE:
+                features = self.fusion.extract_features(last_sequence, sent_scores)
+                pred, confidence = self.fusion.predict(features, rsi=rsi)
+                signal = "BUY" if pred == 1 else "SELL"
+                if confidence < 0.6: signal = "HOLD"
+            else:
+                # Fallback: Basic Trend-Following Signal
+                signal = "BUY" if rsi < 40 else ("SELL" if rsi > 70 else "HOLD")
+                confidence = 0.5
+
             
             # 5. Advanced Price Forecast
             current_price = float(latest['close'])

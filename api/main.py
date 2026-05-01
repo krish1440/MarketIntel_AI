@@ -36,7 +36,8 @@ from bs4 import BeautifulSoup
 # Add parent directory to path for cross-module relative imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.schema import get_session, Stock, HistoricalPrice, NewsArticle, LiveQuote
+from db.schema import get_session, Stock, HistoricalPrice, NewsArticle, LiveQuote, Watchlist, Alert
+
 from intelligence.prediction_service import PredictionService
 
 # Global Application Instance
@@ -257,8 +258,9 @@ def fetch_and_save_news(session, ticker):
                 count += 1
         session.commit()
     except Exception as e:
-        print(f"Error refreshing news for {ticker}: {e}")
+        print(f"Error refreshing news for {ticker}: {str(e).encode('ascii', 'ignore').decode('ascii')}")
         session.rollback()
+
     return count
 
 @app.get("/api/news/{ticker}")
@@ -304,7 +306,82 @@ def refresh_news(ticker: str):
     session.close()
     return {"new_articles": new_count}
 
+@app.get("/api/watchlist")
+def get_watchlist():
+    """Returns the list of stocks currently being monitored in the watchlist."""
+    session = get_session()
+    watchlist = session.query(Watchlist).filter_by(is_active=1).all()
+    results = []
+    for item in watchlist:
+        stock = session.query(Stock).filter_by(id=item.stock_id).first()
+        if stock:
+            results.append({
+                "id": stock.id,
+                "ticker": stock.ticker,
+                "name": stock.name,
+                "target_above": float(item.target_price_above) if item.target_price_above else None,
+                "target_below": float(item.target_price_below) if item.target_price_below else None,
+                "sentiment_threshold": float(item.sentiment_threshold) if item.sentiment_threshold else None
+            })
+    session.close()
+    return results
+
+@app.post("/api/watchlist/{stock_id}")
+def add_to_watchlist(stock_id: int, target_above: float = None, target_below: float = None, sentiment_threshold: float = 0.7):
+    """Adds a stock to the watchlist or updates existing threshold settings."""
+    session = get_session()
+    existing = session.query(Watchlist).filter_by(stock_id=stock_id).first()
+    if existing:
+        existing.is_active = 1
+        existing.target_price_above = target_above
+        existing.target_price_below = target_below
+        existing.sentiment_threshold = sentiment_threshold
+    else:
+        new_item = Watchlist(
+            stock_id=stock_id,
+            target_price_above=target_above,
+            target_price_below=target_below,
+            sentiment_threshold=sentiment_threshold
+        )
+        session.add(new_item)
+    session.commit()
+    session.close()
+    return {"status": "success"}
+
+@app.delete("/api/watchlist/{stock_id}")
+def remove_from_watchlist(stock_id: int):
+    """Removes a stock from the watchlist."""
+    session = get_session()
+    item = session.query(Watchlist).filter_by(stock_id=stock_id).first()
+    if item:
+        session.delete(item)
+        session.commit()
+    session.close()
+    return {"status": "removed"}
+
+@app.get("/api/alerts")
+def get_alerts(limit: int = 20):
+    """Retrieves the history of triggered market alerts for the Notification Center."""
+    session = get_session()
+    # Join with Stock to ensure we have tickers
+    alerts = session.query(Alert).join(Stock).order_by(Alert.timestamp.desc()).limit(limit).all()
+    results = []
+    for a in alerts:
+        stock = session.query(Stock).filter_by(id=a.stock_id).first()
+        results.append({
+            "id": a.id,
+            "ticker": stock.ticker if stock else "UNKNOWN",
+            "type": a.alert_type,
+            "message": a.message,
+            "value": float(a.trigger_value),
+            "time": a.timestamp.isoformat()
+        })
+    session.close()
+    return results
+
 if __name__ == "__main__":
+
     import uvicorn
     # Entry point for production-grade Uvicorn server
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+

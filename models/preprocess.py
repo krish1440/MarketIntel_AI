@@ -1,7 +1,13 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-import torch
+try:
+    import torch
+    HAS_TORCH_PREPROCESS = True
+except Exception as e:
+    print(f"Warning: torch could not be loaded in preprocess.py: {e}")
+    HAS_TORCH_PREPROCESS = False
+
 
 def calculate_technical_indicators(df):
     """
@@ -71,6 +77,9 @@ def to_torch(X, y):
     """
     Convert numpy arrays to torch tensors.
     """
+    if not HAS_TORCH_PREPROCESS:
+        return None, None
     X_tensor = torch.from_numpy(X).type(torch.Tensor)
     y_tensor = torch.from_numpy(y).type(torch.Tensor).view(-1, 1)
     return X_tensor, y_tensor
+

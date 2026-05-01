@@ -66,8 +66,8 @@ For a deep-dive into the neural orchestration and system blueprints, visit our:
 *   **`schema.py`**: The **SQLAlchemy** blueprint. Defines the relational structure for Stocks, Prices, Quotes, and News.
 
 ### 📂 `/scripts`: Production Utilities
-*   **`smart_export.py`**: Our custom additive export engine. It appends rows to history and merges columns into the price matrix.
-*   **`export_kaggle.py`**: Standard full-export utility for fresh dataset initialization.
+*   **`smart_export.py`**: The **Master Export Engine**. Handles high-performance additive exports, merges price matrices, and automates the Kaggle dataset versioning.
+
 
 ---
 
