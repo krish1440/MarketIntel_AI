@@ -1,3 +1,21 @@
+"""
+MARKETINTEL AI: SYMBOL DISCOVERY ENGINE
+=======================================
+
+This module acts as the "Mapmaker" for the system. It fetches the latest 
+equity lists from the NSE and BSE, standardizes their symbols, and seeds 
+the core 'stocks' table.
+
+Key Features:
+- NSE Equity List Discovery (via nsepython).
+- BSE Equity List Discovery (via bsedata).
+- Automated Ticker Standardizing (e.g., adding .NS/.BO suffixes).
+- Idempotent Database Seeding.
+
+Maintainer: MarketIntel AI Data Engineering
+Version: 1.1.0
+"""
+
 import sys
 import os
 import pandas as pd
@@ -9,6 +27,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock
 
 def discover_nse_symbols():
+    """Fetches the complete list of equity symbols from the NSE.
+    
+    Returns:
+        List of symbol strings (e.g., ['RELIANCE', 'TCS']).
+    """
     print("Fetching NSE Equity list...")
     try:
         df = nsepython.nse_eqlist()
@@ -20,6 +43,11 @@ def discover_nse_symbols():
         return []
 
 def discover_bse_symbols():
+    """Fetches the complete dictionary of stocks from the BSE.
+    
+    Returns:
+        Dictionary mapping scrip codes to company names.
+    """
     print("Fetching BSE Equity list...")
     try:
         b = BSE()
@@ -31,6 +59,11 @@ def discover_bse_symbols():
         return {}
 
 def discover_nifty_500():
+    """Fetches all equity symbols on NSE for total market coverage.
+    
+    Returns:
+        List of all NSE equity symbols.
+    """
     print("Fetching NSE Equity symbols...")
     try:
         # nse_eq_symbols returns a list of all equity symbols on NSE
@@ -44,9 +77,10 @@ def discover_nifty_500():
         return []
 
 def update_database():
+    """Orchestrates the discovery and seeding of symbols into the database."""
     session = get_session()
     
-    # 1. NIFTY 500 Update
+    # 1. NIFTY 500 / Total Market Update
     nse_symbols = discover_nifty_500()
     count_n = 0
     for sym in nse_symbols:
@@ -58,7 +92,7 @@ def update_database():
                 ticker=sym,
                 name=f"{sym} (NSE)",
                 nse_symbol=f"{sym}.NS",
-                bse_symbol=f"{sym}.BO" # Most Nifty 500 stocks share the same ticker on BSE
+                bse_symbol=f"{sym}.BO" # Most NSE stocks share the same ticker on BSE
             )
             session.add(new_stock)
             count_n += 1
@@ -72,3 +106,4 @@ def update_database():
 
 if __name__ == "__main__":
     update_database()
+
