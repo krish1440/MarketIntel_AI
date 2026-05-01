@@ -1,8 +1,27 @@
+"""
+MARKETINTEL AI: REAL-TIME PRICE POLLER
+======================================
+
+This module implements a high-frequency polling engine that tracks live 
+stock prices across the NSE and BSE. It captures 1-minute interval data 
+and persists it to the 'live_quotes' table for dashboard visualization.
+
+Key Features:
+- 1-Minute Interval Polling.
+- Batch Fetching (Chunked) to optimize API calls.
+- Automated Intraday Change Percentage Calculation.
+- Real-time DB persistence with conflict management.
+
+Maintainer: MarketIntel AI Data Engineering
+Version: 1.1.0
+"""
+
 import yfinance as yf
 import time
 import sys
 import os
 from datetime import datetime
+import math
 
 # Add parent directory to path for db imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -10,6 +29,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, LiveQuote
 
 def poll_prices():
+    """Main execution loop for real-time price polling."""
     session = get_session()
     
     while True:
@@ -20,7 +40,6 @@ def poll_prices():
                 continue
 
             print(f"Polling {len(stocks)} companies across NSE & BSE...", flush=True)
-            import math
             
             # Prepare batch lists
             nse_tickers = [s.nse_symbol for s in stocks if s.nse_symbol]
@@ -92,3 +111,4 @@ def poll_prices():
 
 if __name__ == "__main__":
     poll_prices()
+
