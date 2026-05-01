@@ -30,11 +30,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.schema import get_session, Stock, NewsArticle
 from models.sentiment_model import get_sentiment_score
+from ingestion.alert_manager import AlertManager
 
 # Global cache of URLs to avoid redundant DB lookups in high-frequency loops
 processed_urls = set()
+alert_mgr = None
 
 def load_url_cache(session):
+
     """Populates the in-memory URL cache from the database.
     
     Args:
@@ -88,7 +91,16 @@ def save_article(session, stock_id, entry):
     )
     session.add(article)
     processed_urls.add(entry.link)
+    
+    # Check for sentiment alerts
+    if alert_mgr:
+        # We need the ticker, let's fetch it if not available (or we could pass it)
+        stock = session.query(Stock).filter_by(id=stock_id).first()
+        if stock:
+            alert_mgr.check_sentiment_alerts(stock_id, score, stock.ticker)
+            
     return True
+
 
 def fetch_broad_market_news(session, stocks):
     """Fetches general Indian market news and maps headlines to specific stocks.
@@ -145,8 +157,11 @@ def fetch_specific_news(session, stock):
 
 def main():
     """Main loop for the News Aggregation engine."""
+    global alert_mgr
     session = get_session()
+    alert_mgr = AlertManager(session)
     load_url_cache(session)
+
     
     stocks = session.query(Stock).all()
     if not stocks:

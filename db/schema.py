@@ -45,6 +45,26 @@ class NewsArticle(Base):
     published_at = Column(DateTime)
     sentiment_score = Column(DECIMAL(10, 4), nullable=True)
 
+class Watchlist(Base):
+    __tablename__ = 'watchlists'
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey('stocks.id'), unique=True)
+    target_price_above = Column(DECIMAL(15, 2), nullable=True)
+    target_price_below = Column(DECIMAL(15, 2), nullable=True)
+    sentiment_threshold = Column(DECIMAL(10, 4), nullable=True)
+    is_active = Column(Integer, default=1) # 1 for active, 0 for paused
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class Alert(Base):
+    __tablename__ = 'alerts'
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey('stocks.id'))
+    alert_type = Column(String(50)) # PRICE_ABOVE, PRICE_BELOW, SENTIMENT_SPIKE, etc.
+    message = Column(String, nullable=False)
+    trigger_value = Column(DECIMAL(15, 4))
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 def get_engine():
     DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
     return create_engine(DATABASE_URL)

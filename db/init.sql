@@ -95,6 +95,34 @@ CREATE TABLE IF NOT EXISTS news_articles (
 );
 
 -- -----------------------------------------------------------------------------
+-- TABLE: watchlists
+-- DESCRIPTION: Stores user-defined monitoring thresholds for specific stocks.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS watchlists (
+    id SERIAL PRIMARY KEY,
+    stock_id INTEGER REFERENCES stocks(id) UNIQUE,
+    target_price_above DECIMAL(15, 2),
+    target_price_below DECIMAL(15, 2),
+    sentiment_threshold DECIMAL(10, 4),
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------------------------
+-- TABLE: alerts
+-- DESCRIPTION: Stores the history of triggered alerts for dashboard auditing.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS alerts (
+    id SERIAL PRIMARY KEY,
+    stock_id INTEGER REFERENCES stocks(id),
+    alert_type VARCHAR(50),
+    message TEXT NOT NULL,
+    trigger_value DECIMAL(15, 4),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- -----------------------------------------------------------------------------
 -- SEED DATA: CORE EQUITIES
 -- DESCRIPTION: Pre-populates the database with blue-chip Indian stocks to 
 --              ensure system functionality upon initial deployment.

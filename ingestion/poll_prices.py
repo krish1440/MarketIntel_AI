@@ -27,12 +27,15 @@ import math
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.schema import get_session, Stock, LiveQuote
+from ingestion.alert_manager import AlertManager
 
 def poll_prices():
     """Main execution loop for real-time price polling."""
     session = get_session()
+    alert_mgr = AlertManager(session)
     
     while True:
+
         try:
             stocks = session.query(Stock).all()
             if not stocks:
@@ -74,6 +77,9 @@ def poll_prices():
                                         price=price, change_percent=change
                                     )
                                     session.add(quote)
+                                    # Check for watchlist alerts
+                                    alert_mgr.check_price_alerts(stock.id, price, stock.ticker)
+
                 session.commit()
 
             # 2. Batch Fetch BSE (Chunked)
@@ -99,6 +105,9 @@ def poll_prices():
                                         price=price, change_percent=change
                                     )
                                     session.add(quote)
+                                    # Check for watchlist alerts
+                                    alert_mgr.check_price_alerts(stock.id, price, stock.ticker)
+
                 session.commit()
 
             print(f"Successfully updated all stocks at {datetime.now().strftime('%H:%M:%S')}", flush=True)
