@@ -1,9 +1,11 @@
 """
-MARKETINTEL AI: ALERT SIMULATOR
-===============================
-This script simulates a price update for a stock to verify that the 
-Watchlist/Alert system triggers correctly without needing to fetch 
-live data from yfinance.
+MarketIntel AI: Alert Simulation Engine
+=======================================
+
+This diagnostic script artificially injects extreme price and sentiment 
+events into the `AlertManager` pipeline. It allows developers to verify 
+push notifications and database inserts without waiting for real-world 
+market volatility.
 """
 
 import sys
@@ -16,6 +18,12 @@ from db.schema import get_session, Stock, LiveQuote, Watchlist
 from ingestion.alert_manager import AlertManager
 
 def simulate_alert():
+    """
+    Executes a mock price spike and a mock positive news event for RELIANCE.
+    
+    Checks the local database for existing watchlists, updates thresholds if
+    necessary, and then manually fires the internal AlertManager methods.
+    """
     session = get_session()
     alert_mgr = AlertManager(session)
     
