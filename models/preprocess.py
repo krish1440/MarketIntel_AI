@@ -1,3 +1,11 @@
+"""
+MarketIntel AI: Data Preprocessing & Technical Engine
+=====================================================
+
+This module handles the transformation of raw OHLCV price strings into 
+advanced technical indicators and scaled tensor arrays suitable for 
+deep learning models.
+"""
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
@@ -11,7 +19,16 @@ except Exception as e:
 
 def calculate_technical_indicators(df):
     """
-    Calculate an Advanced Industrial Technical Suite for the dataframe.
+    Calculates an Advanced Industrial Technical Suite for a given dataframe.
+
+    Injects SMA, EMA, RSI, MACD, Bollinger Bands, ATR, and VWAP into the 
+    price history, dropping the reliance on manual or external calculations.
+
+    Args:
+        df (pandas.DataFrame): The raw historical price dataset.
+
+    Returns:
+        pandas.DataFrame: The augmented dataset containing the new technical columns.
     """
     # Ensure data is sorted
     df = df.sort_values('date')
@@ -58,7 +75,15 @@ def calculate_technical_indicators(df):
 
 def prepare_lstm_data(df, window_size=60, feature_cols=['close', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']):
     """
-    Prepare sequences for LSTM.
+    Transforms tabular data into sequential overlapping windows for LSTM training.
+
+    Args:
+        df (pandas.DataFrame): The technical-augmented price dataset.
+        window_size (int): Number of time steps per sequence.
+        feature_cols (list): Specific columns to include in the sequence window.
+
+    Returns:
+        tuple: (X sequences array, y target array, MinMaxScaler object)
     """
     # Fill any NaNs from technical indicators
     df = df.ffill().bfill()
@@ -75,7 +100,14 @@ def prepare_lstm_data(df, window_size=60, feature_cols=['close', 'SMA_20', 'RSI_
 
 def to_torch(X, y):
     """
-    Convert numpy arrays to torch tensors.
+    Converts preprocessed numpy arrays into PyTorch Tensors.
+
+    Args:
+        X (numpy.ndarray): The feature sequences.
+        y (numpy.ndarray): The target values.
+
+    Returns:
+        tuple: (X_tensor, y_tensor) ready for model ingestion.
     """
     if not HAS_TORCH_PREPROCESS:
         return None, None
