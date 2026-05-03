@@ -1,3 +1,11 @@
+"""
+MarketIntel AI: Neural Sentiment Analyzer
+=========================================
+
+Wraps Hugging Face Transformers (DistilBERT) to convert raw financial 
+news headlines into normalized sentiment scores (-1.0 to 1.0). Includes 
+a rule-based heuristic fallback if the neural pipeline fails to load.
+"""
 try:
     from transformers import pipeline
     import torch
