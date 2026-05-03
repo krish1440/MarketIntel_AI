@@ -1,3 +1,10 @@
+"""
+MarketIntel AI: LSTM Price Model Trainer
+========================================
+
+Orchestrates the data extraction, preprocessing, and model training loop
+for the core PyTorch LSTM network. Handles both full and incremental training.
+"""
 import sys
 import os
 import pandas as pd
