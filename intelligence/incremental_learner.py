@@ -1,3 +1,11 @@
+"""
+MarketIntel AI: Incremental Learning Service
+============================================
+
+Handles the continuous update cycle for our machine learning models. Instead of 
+re-training from scratch (which is expensive and slow), this engine extracts 
+only the newest data points and fine-tunes existing trees (XGBoost).
+"""
 import sys
 import os
 import xgboost as xgb
@@ -10,6 +18,12 @@ from models.train_fusion import generate_fusion_dataset
 from db.schema import get_session, Stock
 
 def update_models_incrementally():
+    """
+    Fetches the newest data slice from the database and incrementally updates 
+    the existing XGBoost fusion model. 
+
+    If no model exists, it trains a new one from the given data slice.
+    """
     session = get_session()
     stocks = session.query(Stock).all()
     

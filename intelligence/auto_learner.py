@@ -1,3 +1,12 @@
+"""
+MarketIntel AI: Autonomous Learner Daemon
+=========================================
+
+This module runs a background process that monitors the database for new
+historical data. Once enough new data points are detected, it triggers
+an automatic fine-tuning process for the price models, ensuring the 
+intelligence stack stays current without manual intervention.
+"""
 import sys
 import os
 import time
@@ -11,11 +20,29 @@ from db.schema import get_session, HistoricalPrice
 from models.train_price import train_model
 
 class AutoLearner:
+    """
+    Background daemon that manages continuous learning for the intelligence models.
+
+    It compares current database records against the last known state stored in 
+    checkpoints, triggering retraining cycles when sufficient new data arrives.
+    """
     def __init__(self, check_interval_seconds=3600):
+        """
+        Initializes the AutoLearner with a specified polling interval.
+
+        Args:
+            check_interval_seconds (int): How often (in seconds) to check the DB.
+        """
         self.interval = check_interval_seconds
         self.metadata_path = 'models/checkpoints/metadata.json'
         
     def get_last_data_count(self):
+        """
+        Reads the previously processed row count from the model checkpoint metadata.
+
+        Returns:
+            int: The total number of historical price records at last training.
+        """
         try:
             with open(self.metadata_path, 'r') as f:
                 return json.load(f).get('last_data_count', 0)
@@ -23,6 +50,12 @@ class AutoLearner:
             return 0
 
     def set_last_data_count(self, count):
+        """
+        Updates the model checkpoint metadata with the new row count.
+
+        Args:
+            count (int): The updated row count to persist.
+        """
         try:
             with open(self.metadata_path, 'r') as f:
                 meta = json.load(f)
@@ -33,6 +66,12 @@ class AutoLearner:
             pass
 
     def run(self):
+        """
+        Starts the continuous polling loop. 
+        
+        It checks for new records every `self.interval` seconds and triggers
+        the incremental training pipeline if threshold conditions are met.
+        """
         print("Autonomous Learner Daemon Started...")
         while True:
             session = get_session()

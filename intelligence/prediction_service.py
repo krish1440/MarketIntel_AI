@@ -1,3 +1,11 @@
+"""
+MarketIntel AI: Neural Prediction Service
+=========================================
+
+This module orchestrates the neural intelligence pipeline. It acts as a bridge
+between the raw market data stored in PostgreSQL and the deep learning models 
+(LSTM for price sequences, XGBoost for multimodal fusion, and DistilBERT for sentiment).
+"""
 import sys
 import os
 import pandas as pd
@@ -19,7 +27,18 @@ from db.schema import get_session, Stock, HistoricalPrice, NewsArticle
 from models.preprocess import calculate_technical_indicators, prepare_lstm_data, to_torch
 
 class PredictionService:
+    """
+    Singleton service that maintains active AI models in memory.
+
+    It encapsulates the logic for feature extraction, technical indicator 
+    calculation, sequence preparation for LSTMs, and final BUY/HOLD/SELL
+    signal fusion.
+    """
     def __init__(self):
+        """
+        Initializes the PredictionService and pre-loads neural checkpoints 
+        if PyTorch is available on the host machine.
+        """
         self.fusion = None
         if TORCH_AVAILABLE:
             try:
@@ -35,6 +54,21 @@ class PredictionService:
 
 
     def get_signal(self, ticker, exchange="NSE"):
+        """
+        Generates a comprehensive neural trading signal and price forecast.
+
+        This method dynamically reads recent historical data, calculates critical
+        technical indicators, aggregates recent news sentiment, and passes 
+        features through the MultimodalFusion model.
+
+        Args:
+            ticker (str): The stock symbol to analyze.
+            exchange (str): The stock exchange (e.g., 'NSE' or 'BSE').
+
+        Returns:
+            dict: An intelligence payload containing the trading signal, technical 
+                  summaries, current price, and advanced multi-day price forecast.
+        """
         session = get_session()
         try:
             stock = session.query(Stock).filter_by(ticker=ticker).first()
