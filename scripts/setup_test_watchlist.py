@@ -1,8 +1,10 @@
 """
-MARKETINTEL AI: TEST WATCHLIST SETUP
-====================================
-This script seeds the 'watchlists' table with a test entry to verify 
-the alert system is working.
+MarketIntel AI: Test Watchlist Seeder
+=====================================
+
+This utility seeds the database with a high-sensitivity 'Watchlist' entry 
+for RELIANCE. It is used primarily by developers to verify that the 
+asynchronous AlertManager triggers notifications successfully.
 """
 
 import sys
@@ -14,6 +16,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, Watchlist
 
 def setup_test():
+    """
+    Injects a test watchlist entry into the database.
+    
+    The thresholds are intentionally set exceptionally low/high to ensure 
+    that the next polling cycle or news ingestion immediately fires an alert.
+    """
     session = get_session()
     
     # Target RELIANCE for testing
