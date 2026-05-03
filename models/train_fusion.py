@@ -1,3 +1,10 @@
+"""
+MarketIntel AI: Fusion Model Training Pipeline
+==============================================
+
+Builds multimodal datasets (price sequences + news sentiment) to train the 
+XGBoost meta-classifier that generates the final BUY/SELL signals.
+"""
 import xgboost as xgb
 import pandas as pd
 import numpy as np
