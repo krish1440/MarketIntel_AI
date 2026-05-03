@@ -1,10 +1,32 @@
+"""
+MarketIntel AI: Multimodal Fusion Engine
+========================================
+
+This module provides the `MultimodalFusion` class which intelligently combines
+the sequence predictions from the LSTM with the semantic analysis from the 
+Transformers model to generate a unified, high-confidence trading signal.
+"""
 import xgboost as xgb
 import os
 import torch
 from .price_lstm import PriceLSTM
 
 class MultimodalFusion:
+    """
+    An orchestrator class that fuses different AI model outputs.
+
+    It loads both the LSTM model (for sequence modeling) and the XGBoost model 
+    (for signal classification), generating a final predictive heuristic.
+    """
     def __init__(self, lstm_input_dim=5, lstm_checkpoint=None, xgb_checkpoint=None):
+        """
+        Initializes the fusion engine with appropriate model checkpoints.
+
+        Args:
+            lstm_input_dim (int): The number of features expected by the LSTM.
+            lstm_checkpoint (str, optional): Path to the PyTorch LSTM weights.
+            xgb_checkpoint (str, optional): Path to the XGBoost tree weights.
+        """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.lstm_model = PriceLSTM(lstm_input_dim, 64, 2, 1).to(self.device)
         
@@ -37,7 +59,17 @@ class MultimodalFusion:
 
     def predict(self, feature_vector, rsi=50):
         """
-        Predict final movement using XGBoost or Heuristic if not trained.
+        Predicts the final movement signal (1 for BUY, 0 for SELL/HOLD).
+
+        If the XGBoost model is fully trained, it delegates to the XGB Classifier.
+        If not, it relies on an advanced multimodal heuristic fallback logic.
+
+        Args:
+            feature_vector (list): The combined [lstm_pred, sent_avg] array.
+            rsi (float): Current Relative Strength Index value (used in fallback).
+
+        Returns:
+            tuple: (Prediction Class (int), Confidence Score (float))
         """
         try:
             if hasattr(self.xgb_model, 'n_features_in_'):
