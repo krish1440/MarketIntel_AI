@@ -1,3 +1,10 @@
+"""
+MarketIntel AI: Price Prediction Training Utilities
+===================================================
+
+Contains hardware-optimized PyTorch utilities to build and train the LSTM model.
+Includes built-in optimizations for Intel hardware (IPEX).
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -26,6 +33,22 @@ class StockLSTM(nn.Module):
         return out
 
 def train_model(X_train, y_train, input_dim, hidden_dim=64, num_layers=2, output_dim=1, epochs=50, lr=0.001):
+    """
+    Trains the StockLSTM model using PyTorch.
+
+    Args:
+        X_train (torch.Tensor): Training sequence inputs.
+        y_train (torch.Tensor): Training target outputs.
+        input_dim (int): Number of features.
+        hidden_dim (int): Dimensionality of the hidden state.
+        num_layers (int): Number of LSTM layers.
+        output_dim (int): Target dimension.
+        epochs (int): Training iterations.
+        lr (float): Learning rate.
+
+    Returns:
+        torch.nn.Module: The trained PyTorch model.
+    """
     model = StockLSTM(input_dim, hidden_dim, num_layers, output_dim)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
