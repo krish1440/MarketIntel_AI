@@ -1,3 +1,11 @@
+"""
+MarketIntel AI: Database Schema and Persistence Layer
+=====================================================
+
+This module defines the relational mapping (ORM) for the entire MarketIntel 
+AI ecosystem using SQLAlchemy. It establishes the schema for stocks, price
+history, real-time quotes, news sentiment, watchlists, and triggered alerts.
+"""
 from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, BIGINT, DateTime, Date, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -6,6 +14,7 @@ import datetime
 Base = declarative_base()
 
 class Stock(Base):
+    """Represents a unique equity in the Indian Stock Market universe."""
     __tablename__ = 'stocks'
     id = Column(Integer, primary_key=True)
     ticker = Column(String(20), unique=True, nullable=False) # Base ticker (e.g. RELIANCE)
@@ -14,6 +23,7 @@ class Stock(Base):
     bse_symbol = Column(String(20)) # e.g. 500325.BO
 
 class LiveQuote(Base):
+    """Stores high-frequency price snapshots for active market monitoring."""
     __tablename__ = 'live_quotes'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
@@ -24,6 +34,7 @@ class LiveQuote(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 class HistoricalPrice(Base):
+    """Archival storage for daily OHLCV data points used for AI training."""
     __tablename__ = 'historical_prices'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
@@ -36,6 +47,7 @@ class HistoricalPrice(Base):
     volume = Column(BIGINT)
 
 class NewsArticle(Base):
+    """Container for scraped news data and its associated neural sentiment score."""
     __tablename__ = 'news_articles'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
@@ -46,6 +58,7 @@ class NewsArticle(Base):
     sentiment_score = Column(DECIMAL(10, 4), nullable=True)
 
 class Watchlist(Base):
+    """User-defined monitoring thresholds for specific equities."""
     __tablename__ = 'watchlists'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'), unique=True)
@@ -56,6 +69,7 @@ class Watchlist(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Alert(Base):
+    """Persistence record for triggered price or sentiment notifications."""
     __tablename__ = 'alerts'
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey('stocks.id'))
@@ -66,10 +80,12 @@ class Alert(Base):
 
 
 def get_engine():
+    """Returns a SQLAlchemy engine instance connected to the stock_intelligence database."""
     DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
     return create_engine(DATABASE_URL)
 
 def get_session():
+    """Initializes and returns a new SQLAlchemy session for database operations."""
     engine = get_engine()
     Session = sessionmaker(bind=engine)
     return Session()
