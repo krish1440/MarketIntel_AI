@@ -1,8 +1,10 @@
 """
-MARKETINTEL AI: ALERT VIEWER (READ-ONLY)
-========================================
-This utility allows you to safely view triggered alerts from the database
-without modifying any data.
+MarketIntel AI: Alert Viewer Terminal
+=====================================
+
+A read-only command-line utility that fetches and displays the 10 most 
+recent alerts triggered by the intelligence system. Useful for server 
+monitoring via SSH.
 """
 
 import sys
@@ -14,6 +16,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Alert, Stock
 
 def view_alerts():
+    """
+    Connects to the database and prints the top 10 most recent alerts in 
+    descending chronological order.
+    """
     session = get_session()
     try:
         alerts = session.query(Alert).join(Stock).order_by(Alert.timestamp.desc()).limit(10).all()
