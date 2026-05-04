@@ -1,5 +1,5 @@
 """
-MARKETINTEL AI: HISTORICAL BACKFILL ENGINE
+MarketIntel AI: Historical Backfill Engine
 ==========================================
 
 This module is responsible for the initial deep-seeding of the database with 
@@ -11,9 +11,6 @@ Key Features:
 - Multi-threaded Batch Processing (Chunked).
 - Exchange-Specific Mapping (NSE/BSE).
 - Duplication Prevention via Date Filtering.
-
-Maintainer: MarketIntel AI Data Engineering
-Version: 1.2.0
 """
 
 import yfinance as yf
@@ -29,14 +26,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, HistoricalPrice
 
 def backfill_stock_exchange(session, stock, symbol, exchange, period="5y"):
-    """Performs a historical backfill for a single stock on a specific exchange.
-    
+    """
+    Performs a historical backfill for a single stock on a specific exchange.
+
     Args:
-        session: The SQLAlchemy database session.
-        stock: The Stock ORM object.
-        symbol: The exchange-specific symbol (e.g., RELIANCE.NS).
-        exchange: The exchange name ('NSE' or 'BSE').
-        period: The lookback period (default '5y').
+        session (sqlalchemy.orm.Session): The active database session.
+        stock (Stock): The Stock ORM object.
+        symbol (str): The exchange-specific symbol (e.g., RELIANCE.NS).
+        exchange (str): The exchange name ('NSE' or 'BSE').
+        period (str): The lookback period (default '5y').
     """
     if not symbol: return
     
