@@ -12,27 +12,27 @@ The platform is structured into five core architectural layers:
 ### 1. 🛰️ Ingestion Layer (`ingestion/`)
 *   **Purpose**: Handles real-time and historical data acquisition.
 *   **Tech**: yfinance, nsepython, feedparser.
-*   **Handbook**: [INGESTION_DOCUMENTATION.md](file:///d:/PROJECT/Ai-STOCK-Market/ingestion/INGESTION_DOCUMENTATION.md)
+*   **Handbook**: [INGESTION_DOCUMENTATION.md](./ingestion/INGESTION_DOCUMENTATION.md)
 
 ### 2. 🗄️ Persistence Layer (`db/`)
 *   **Purpose**: Manages the PostgreSQL relational engine and SQLAlchemy ORM.
 *   **Tech**: PostgreSQL 16, SQLAlchemy.
-*   **Handbook**: [DATABASE_DOCUMENTATION.md](file:///d:/PROJECT/Ai-STOCK-Market/db/DATABASE_DOCUMENTATION.md)
+*   **Handbook**: [DATABASE_DOCUMENTATION.md](./db/DATABASE_DOCUMENTATION.md)
 
 ### 3. 🧠 Neural Layer (`models/`)
 *   **Purpose**: Contains the AI architectures and training pipelines.
 *   **Tech**: PyTorch, DistilBERT, XGBoost, Intel IPEX.
-*   **Handbook**: [MODELS_HANDBOOK.md](file:///d:/PROJECT/Ai-STOCK-Market/models/MODELS_HANDBOOK.md)
+*   **Handbook**: [MODELS_HANDBOOK.md](./models/MODELS_HANDBOOK.md)
 
 ### 4. ⚡ Intelligence Layer (`intelligence/`)
 *   **Purpose**: Houses the high-level decision daemons and inference services.
 *   **Tech**: Singleton Inference Engines, Auto-Learner Daemons.
-*   **Handbook**: [INTELLIGENCE_HANDBOOK.md](file:///d:/PROJECT/Ai-STOCK-Market/intelligence/INTELLIGENCE_HANDBOOK.md)
+*   **Handbook**: [INTELLIGENCE_HANDBOOK.md](./intelligence/INTELLIGENCE_HANDBOOK.md)
 
 ### 5. 🖥️ Presentation Layer (`api/` & `dashboard/`)
 *   **Purpose**: Provides the RESTful interface and the Next.js visual terminal.
 *   **Tech**: FastAPI, Next.js 15, TailwindCSS.
-*   **Handbooks**: [ARCHITECT_HANDBOOK.md](file:///d:/PROJECT/Ai-STOCK-Market/api/ARCHITECT_HANDBOOK.md) & [DASHBOARD_HANDBOOK.md](file:///d:/PROJECT/Ai-STOCK-Market/dashboard/DASHBOARD_HANDBOOK.md)
+*   **Handbooks**: [ARCHITECT_HANDBOOK.md](./api/ARCHITECT_HANDBOOK.md) & [DASHBOARD_HANDBOOK.md](./dashboard/DASHBOARD_HANDBOOK.md)
 
 ---
 
