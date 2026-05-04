@@ -1,3 +1,12 @@
+"""
+MarketIntel AI: Global Service Orchestrator
+===========================================
+
+This is the primary entry point for the MarketIntel AI ecosystem. It 
+automatically initializes the database, performs historical data syncs, 
+and spawns the backend API, frontend dashboard, and real-time ingestion 
+daemons as separate processes.
+"""
 import subprocess
 import time
 import sys
@@ -11,6 +20,14 @@ if not os.path.exists(PYTHON_EXE):
     PYTHON_EXE = sys.executable
 
 def check_db_and_backfill():
+    """
+    Verifies the integrity of the database and performs automated seeding.
+
+    Checks if the stock list and historical records exist. If the database 
+    is empty, it triggers a full market discovery and historical backfill. 
+    Otherwise, it performs a differential 'Delta Sync' to catch up to the 
+    current date.
+    """
     print("[CHECK] Checking database state...")
     from db.schema import get_session, HistoricalPrice, Stock
     session = get_session()
@@ -39,6 +56,12 @@ def check_db_and_backfill():
         session.close()
 
 def start_services():
+    """
+    Spawns all microservices and monitors their lifecycle.
+
+    Launches the PostgreSQL container, the FastAPI backend, the Next.js 
+    dashboard, and the background polling services (Price/News). 
+    """
     processes = []
     
     print("[START] Starting MarketIntel AI Ecosystem...")
