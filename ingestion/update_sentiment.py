@@ -1,5 +1,5 @@
 """
-MARKETINTEL AI: SENTIMENT RETROFIT UTILITY
+MarketIntel AI: Sentiment Retrofit Utility
 ==========================================
 
 This module provides retroactive sentiment analysis for news articles. 
@@ -10,9 +10,6 @@ Key Features:
 - Targeted Retroactive Processing.
 - Batch Commit Logic to optimize DB performance.
 - Automated Context Merging (Title + Summary).
-
-Maintainer: MarketIntel AI Intelligence Team
-Version: 1.0.1
 """
 
 import sys
@@ -25,7 +22,12 @@ from db.schema import get_session, NewsArticle
 from models.sentiment_model import get_sentiment_score
 
 def update_sentiment():
-    """Identifies and updates sentiment scores for all pending news articles."""
+    """
+    Identifies and updates sentiment scores for all pending news articles.
+
+    Queries the database for articles with NULL sentiment scores and performs 
+    batch-processed neural inference to backfill the missing metrics.
+    """
     session = get_session()
     
     # Fetch articles without sentiment scores
