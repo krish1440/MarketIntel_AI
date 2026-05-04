@@ -1,5 +1,5 @@
 """
-MARKETINTEL AI: REAL-TIME PRICE POLLER
+MarketIntel AI: Real-Time Price Poller
 ======================================
 
 This module implements a high-frequency polling engine that tracks live 
@@ -11,9 +11,6 @@ Key Features:
 - Batch Fetching (Chunked) to optimize API calls.
 - Automated Intraday Change Percentage Calculation.
 - Real-time DB persistence with conflict management.
-
-Maintainer: MarketIntel AI Data Engineering
-Version: 1.1.0
 """
 
 import yfinance as yf
@@ -30,7 +27,13 @@ from db.schema import get_session, Stock, LiveQuote
 from ingestion.alert_manager import AlertManager
 
 def poll_prices():
-    """Main execution loop for real-time price polling."""
+    """
+    Main execution loop for real-time price polling.
+
+    Identifies all tracked stocks, batch-downloads 1-minute intraday quotes 
+    from yfinance, calculates percentage change from the market open, and 
+    records snapshots in the persistence layer.
+    """
     session = get_session()
     alert_mgr = AlertManager(session)
     
