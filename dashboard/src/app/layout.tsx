@@ -1,3 +1,11 @@
+/**
+ * MarketIntel AI: Root Layout
+ * ==========================
+ * 
+ * Defines the foundational UI structure for the dashboard, including 
+ * global styles, typography (Geist), and the persistent notification 
+ * engine.
+ */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
