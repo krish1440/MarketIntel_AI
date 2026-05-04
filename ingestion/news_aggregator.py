@@ -1,5 +1,5 @@
 """
-MARKETINTEL AI: REAL-TIME NEWS AGGREGATOR
+MarketIntel AI: Real-Time News Aggregator
 =========================================
 
 This module implements a sophisticated news scraping and analysis engine. 
@@ -11,9 +11,6 @@ Key Features:
 - Real-Time AI Sentiment Analysis (-1.0 to 1.0).
 - Anti-Ban Protection (Randomized Jitter & Rotational Fetching).
 - URL Idempotency Cache to minimize database overhead.
-
-Maintainer: MarketIntel AI Intelligence Team
-Version: 1.1.0
 """
 
 import feedparser
@@ -50,15 +47,19 @@ def load_url_cache(session):
     print(f"Cache loaded with {len(processed_urls)} articles.", flush=True)
 
 def save_article(session, stock_id, entry):
-    """Processes and persists a single news article entry.
-    
+    """
+    Processes and persists a single news article entry.
+
+    Calculates real-time AI sentiment scores using DistilBERT before 
+    committing the record.
+
     Args:
-        session: The SQLAlchemy database session.
-        stock_id: The ID of the related stock.
-        entry: The feedparser entry object.
-        
+        session (sqlalchemy.orm.Session): The database session.
+        stock_id (int): The ID of the related stock.
+        entry (feedparser.FeedParserDict): The feedparser entry object.
+
     Returns:
-        Boolean indicating if the article was newly saved.
+        bool: True if the article was newly saved, False if already exists.
     """
     if entry.link in processed_urls:
         return False
@@ -103,11 +104,12 @@ def save_article(session, stock_id, entry):
 
 
 def fetch_broad_market_news(session, stocks):
-    """Fetches general Indian market news and maps headlines to specific stocks.
-    
+    """
+    Fetches general Indian market news and maps headlines to specific stocks.
+
     Args:
-        session: The SQLAlchemy database session.
-        stocks: List of Stock ORM objects to scan for.
+        session (sqlalchemy.orm.Session): The database session.
+        stocks (list): List of Stock ORM objects to scan for.
     """
     print("Fetching broad market headlines...", flush=True)
     rss_urls = [
@@ -132,11 +134,12 @@ def fetch_broad_market_news(session, stocks):
     print(f"  Mapped {new_count} broad articles to specific stocks.", flush=True)
 
 def fetch_specific_news(session, stock):
-    """Fetches targeted news for a specific stock ticker.
-    
+    """
+    Fetches targeted news for a specific stock ticker using Google News RSS.
+
     Args:
-        session: The SQLAlchemy database session.
-        stock: The Stock ORM object.
+        session (sqlalchemy.orm.Session): The database session.
+        stock (Stock): The Stock ORM object.
     """
     query = f"{stock.ticker} share price news"
     encoded_query = urllib.parse.quote(query)
