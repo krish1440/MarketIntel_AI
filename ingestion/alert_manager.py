@@ -20,15 +20,37 @@ from sqlalchemy import desc
 from db.schema import get_session, Alert, Watchlist, Stock
 
 class AlertManager:
-    """Manages the detection and recording of market alerts."""
+    """
+    Manages the detection and recording of market alerts based on defined watchlists.
+
+    This class provides a high-level API for verifying price movements and 
+    sentiment spikes against user-defined thresholds. It includes built-in 
+    cooldown mechanisms to prevent notification fatigue.
+    """
 
     def __init__(self, session=None):
-        """Initializes the manager with a database session."""
+        """
+        Initializes the manager with a database session.
+
+        Args:
+            session (sqlalchemy.orm.Session, optional): The database session to use. 
+                If None, a new session is generated.
+        """
         self.session = session if session else get_session()
         self.cooldown_minutes = 60 # Prevent duplicate alerts for 1 hour
 
     def _is_on_cooldown(self, stock_id, alert_type):
-        """Checks if an alert of the same type was recently sent for a stock."""
+        """
+        Checks if an alert of the same type was recently sent for a stock.
+
+        Args:
+            stock_id (int): The ID of the stock to check.
+            alert_type (str): The type of alert (e.g., 'PRICE_ABOVE').
+
+        Returns:
+            bool: True if an alert of the same type was triggered within the 
+                cooldown window.
+        """
         last_alert = self.session.query(Alert).filter_by(
             stock_id=stock_id, 
             alert_type=alert_type
