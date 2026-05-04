@@ -1,5 +1,5 @@
 """
-MARKETINTEL AI: SMART DELTA SYNC ENGINE
+MarketIntel AI: Smart Delta Sync Engine
 =======================================
 
 This module implements high-speed, incremental data ingestion for the stock 
@@ -10,9 +10,6 @@ Key Features:
 - Differential 'Catch-up' logic (saves bandwidth/time).
 - Batch-Processing with Cooling Periods (respects YFinance Rate Limits).
 - Automatic database connection management.
-
-Maintainer: MarketIntel AI Data Engineering
-Version: 1.1.0
 """
 
 import yfinance as yf
@@ -28,22 +25,31 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, HistoricalPrice
 
 def chunk_list(lst, n):
-    """Splits a list into smaller chunks of size n.
-    
+    """
+    Splits a list into smaller chunks.
+
     Args:
-        lst: The list to be split.
-        n: The maximum size of each chunk.
+        lst (list): The list to be split.
+        n (int): The maximum size of each chunk.
+
+    Yields:
+        list: Sub-segments of the original list.
     """
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
 def update_exchange(session, stocks, exchange_type):
-    """Identifies and fills missing price data for a set of stocks on an exchange.
-    
+    """
+    Identifies and fills missing price data for a set of stocks on an exchange.
+
+    This function performs a 'Lookback Check' to find the most recent date 
+    in the database, fetches missing days from Yahoo Finance, and persists
+    new historical records.
+
     Args:
-        session: The SQLAlchemy database session.
-        stocks: List of Stock ORM objects to check.
-        exchange_type: The exchange name ('NSE' or 'BSE').
+        session (sqlalchemy.orm.Session): The database session.
+        stocks (list): List of Stock ORM objects to check.
+        exchange_type (str): The exchange name ('NSE' or 'BSE').
     """
     symbol_attr = 'nse_symbol' if exchange_type == 'NSE' else 'bse_symbol'
     stocks_to_update = [s for s in stocks if getattr(s, symbol_attr)]
