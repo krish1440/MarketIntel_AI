@@ -1,3 +1,7 @@
+# MarketIntel AI: Dependency Manifest
+# ==================================
+# Core stack: PyTorch + Transformers + XGBoost + FastAPI + SQLAlchemy
+
 nsepython
 bsedata
 feedparser
