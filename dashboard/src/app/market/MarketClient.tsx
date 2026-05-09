@@ -120,10 +120,13 @@ export default function MarketClient() {
                 <Link 
                   href={`/stock/${stock.ticker}`}
                   key={stock.ticker}
-                  className={`relative overflow-hidden bg-slate-900/40 border border-slate-800/50 rounded-[2rem] p-6 backdrop-blur-xl transition-all duration-500 cursor-pointer group hover:bg-slate-900/60 hover:-translate-y-2 hover:border-slate-700/80 ${stock.change >= 0 ? 'hover:shadow-[0_30px_60px_-15px_rgba(16,185,129,0.15)]' : 'hover:shadow-[0_30px_60px_-15px_rgba(244,63,94,0.15)]'}`}
+                  className={`relative overflow-hidden bg-slate-900/40 border border-slate-800/50 rounded-[2rem] p-6 backdrop-blur-xl transition-all duration-500 cursor-pointer group hover:bg-slate-900/60 hover:-translate-y-2 hover:border-slate-700/80 shadow-[0_0_30px_-10px_rgba(0,0,0,0.5)] ${stock.change >= 0 ? 'shadow-[0_0_20px_-12px_rgba(16,185,129,0.1)] hover:shadow-[0_30px_60px_-15px_rgba(16,185,129,0.2)]' : 'shadow-[0_0_20px_-12px_rgba(244,63,94,0.1)] hover:shadow-[0_30px_60px_-15px_rgba(244,63,94,0.2)]'}`}
                 >
-                  {/* Subtle Background Glow */}
-                  <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-[60px] transition-opacity duration-700 opacity-0 group-hover:opacity-20 ${stock.change >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                  {/* Persistent Ambient Glow */}
+                  <div className={`absolute inset-0 opacity-[0.02] group-hover:opacity-[0.07] transition-opacity duration-700 ${stock.change >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                  
+                  {/* Corner Accent Glow */}
+                  <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-[60px] transition-all duration-700 opacity-5 group-hover:opacity-20 ${stock.change >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
 
                   <div className="flex justify-between items-start mb-6 relative z-10">
                     <div className="flex-1">
