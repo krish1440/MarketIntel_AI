@@ -45,6 +45,7 @@ export default function NotificationCenter() {
   return (
     <div className="fixed bottom-8 right-8 z-50">
       <button 
+        suppressHydrationWarning
         onClick={() => { setIsOpen(!isOpen); setHasNew(false); }}
         className={`p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 border border-slate-800 ${hasNew ? 'bg-indigo-600 animate-pulse' : 'bg-slate-900'}`}
       >
