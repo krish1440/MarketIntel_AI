@@ -149,7 +149,7 @@ def run_bulk_audit(output_file="data_exports/signal_audit_report.csv", limit=Non
         df.to_csv(output_file, index=False)
         
         print("\n" + "="*50)
-        print("📊 INSTITUTIONAL SIGNAL AUDIT REPORT")
+        print("INSTITUTIONAL SIGNAL AUDIT REPORT")
         print("="*50)
         
         # Summary Metrics
