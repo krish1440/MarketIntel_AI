@@ -125,17 +125,70 @@ class PredictionService:
             bb_lower = clean(latest['BB_Lower'])
             atr = clean(latest['ATR_14'])
             vwap = clean(latest['VWAP'])
+            adx = clean(latest.get('ADX_14', 0.0))
+            cci = clean(latest.get('CCI_20', 0.0))
+            bb_width = clean(latest.get('BB_Width', 0.0))
+            tenkan = clean(latest.get('Ichimoku_Tenkan', 0.0))
+            kijun = clean(latest.get('Ichimoku_Kijun', 0.0))
 
-            # 4. Signal Generation (Fusion vs Fallback)
+            # 4. Signal Generation (Fusion vs Advanced Heuristic)
             if self.fusion and TORCH_AVAILABLE:
-                features = self.fusion.extract_features(last_sequence, sent_scores)
-                pred, confidence = self.fusion.predict(features, rsi=rsi)
-                signal = "BUY" if pred == 1 else "SELL"
-                if confidence < 0.6: signal = "HOLD"
+                # Prepare technicals for fusion
+                tech_summary = {"rsi": rsi, "adx": adx, "cci": cci}
+                features = self.fusion.extract_features(last_sequence, sent_scores, technicals=tech_summary)
+                pred, model_confidence = self.fusion.predict(features, rsi=rsi)
+                
+                # Refine signal based on advanced indicators (Confluence logic)
+                score = 0
+                if pred == 1: score += 2
+                else: score -= 2
+                
+                # Weighting factors
+                if rsi < 30: score += 2
+                if rsi > 70: score -= 2
+                
+                # Trend & Momentum
+                if adx > 25: 
+                    if latest['close'] > sma_20: score += 1
+                    elif latest['close'] < sma_20: score -= 1
+                
+                # CCI Momentum
+                if cci > 150: score += 1
+                if cci < -150: score -= 1
+                
+                # Ichimoku Confluence
+                if latest['close'] > tenkan and tenkan > kijun: score += 2 # Strong Bullish
+                if latest['close'] < tenkan and tenkan < kijun: score -= 2 # Strong Bearish
+                
+                # Bearish Refinement (Only trigger SELL if price is below VWAP or MACD is negative)
+                if score < 0:
+                    if latest['close'] < vwap: score -= 1
+                    if macd < macd_signal: score -= 1
+                    # Avoid "SELL" if RSI is already very low (oversold bounce risk)
+                    if rsi < 35: score += 2 
+                
+                # Determine 5-tier signal
+                if score >= 5: signal = "STRONG BUY"
+                elif score >= 2: signal = "BUY"
+                elif score <= -5: signal = "STRONG SELL"
+                elif score <= -3: signal = "SELL"
+                else: signal = "HOLD"
+                
+                confidence = (model_confidence + (abs(score) / 10.0)) / 2.0
             else:
-                # Fallback: Basic Trend-Following Signal
-                signal = "BUY" if rsi < 40 else ("SELL" if rsi > 70 else "HOLD")
-                confidence = 0.5
+                # Advanced Heuristic Fallback (Rule-based confluence)
+                score = 0
+                if rsi < 35: score += 2
+                if rsi > 65: score -= 2
+                if cci < -150: score += 1
+                if cci > 150: score -= 1
+                if latest['close'] > sma_20: score += 1
+                else: score -= 1
+                
+                if score >= 2: signal = "BUY"
+                elif score <= -2: signal = "SELL"
+                else: signal = "HOLD"
+                confidence = 0.65
 
             
             # 5. Advanced Price Forecast
@@ -143,8 +196,9 @@ class PredictionService:
             momentum = (current_price / float(prices['close'].iloc[-10]) - 1) if len(prices) > 10 else 0
             
             forecast_points = []
-            # Multi-factor drift
-            daily_drift = (momentum * 0.1) + (sentiment_avg * 0.005) + ((rsi - 50) * -0.0002)
+            # Multi-factor drift (Sentiment + RSI + ADX Trend)
+            trend_factor = 0.001 if adx > 25 and latest['close'] > sma_20 else (-0.001 if adx > 25 else 0)
+            daily_drift = (momentum * 0.1) + (sentiment_avg * 0.005) + ((rsi - 50) * -0.0002) + trend_factor
             
             for i in range(1, 8):
                 noise = np.random.normal(0, 0.001)
@@ -155,7 +209,7 @@ class PredictionService:
                 "ticker": ticker,
                 "exchange": exchange,
                 "signal": signal,
-                "confidence": float(confidence),
+                "confidence": min(float(confidence), 1.0),
                 "sentiment_avg": sentiment_avg,
                 "technicals": {
                     "rsi": rsi,
@@ -166,7 +220,11 @@ class PredictionService:
                     "bb_upper": bb_upper,
                     "bb_lower": bb_lower,
                     "atr": atr,
-                    "vwap": vwap
+                    "vwap": vwap,
+                    "adx": adx,
+                    "cci": cci,
+                    "bb_width": bb_width,
+                    "ichimoku": {"tenkan": tenkan, "kijun": kijun}
                 },
                 "current_price": current_price,
                 "forecast": forecast_points,
