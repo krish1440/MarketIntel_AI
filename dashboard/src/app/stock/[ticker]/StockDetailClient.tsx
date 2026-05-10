@@ -158,8 +158,8 @@ export default function StockDetailClient() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'RSI (14)', val: tech.rsi?.toFixed(1), icon: Gauge, color: 'indigo' },
-                { label: 'MACD (12,26)', val: tech.macd?.toFixed(2), icon: BarChart3, color: 'emerald' },
-                { label: 'SMA (20/50)', val: `${tech.sma_20?.toFixed(0)} / ${tech.sma_50?.toFixed(0)}`, icon: TrendingUp, color: 'slate' },
+                { label: 'ADX (14)', val: tech.adx?.toFixed(1), icon: ShieldAlert, color: 'emerald' },
+                { label: 'CCI (20)', val: tech.cci?.toFixed(0), icon: BarChart3, color: 'slate' },
                 { label: 'ATR (Vol)', val: tech.atr?.toFixed(2), icon: ShieldAlert, color: 'rose' }
               ].map((item, i) => (
                 <div key={i} className="bg-slate-900/40 border border-slate-800/60 p-6 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group">
@@ -226,18 +226,32 @@ export default function StockDetailClient() {
 
           <div className="space-y-6">
             {/* Master Signal Card */}
-            <div className={`bg-gradient-to-br p-8 rounded-[3rem] border border-white/5 backdrop-blur-xl relative overflow-hidden group ${prediction?.signal === 'BUY' ? 'from-emerald-900/40 to-slate-900/40 shadow-[0_0_50px_-12px_rgba(52,211,153,0.3)]' : prediction?.signal === 'SELL' ? 'from-rose-900/40 to-slate-900/40 shadow-[0_0_50px_-12px_rgba(251,113,133,0.3)]' : 'from-slate-800/40 to-slate-900/40'}`}>
+            <div className={`bg-gradient-to-br p-8 rounded-[3rem] border border-white/5 backdrop-blur-xl relative overflow-hidden group transition-all duration-500 ${
+              prediction?.signal?.includes('BUY') ? 'from-emerald-900/40 to-slate-900/40 shadow-[0_0_50px_-12px_rgba(52,211,153,0.3)]' : 
+              prediction?.signal?.includes('SELL') ? 'from-rose-900/40 to-slate-900/40 shadow-[0_0_50px_-12px_rgba(251,113,133,0.3)]' : 
+              'from-slate-800/40 to-slate-900/40'
+            }`}>
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl transition-transform group-hover:scale-150"></div>
+              {prediction?.signal?.startsWith('STRONG') && (
+                <div className="absolute inset-0 bg-white/5 animate-pulse"></div>
+              )}
               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <BrainCircuit className="w-3 h-3" /> Fusion Signal
               </h2>
               <div className="text-center relative z-10">
-                <div className={`text-8xl font-black mb-2 tracking-tighter italic ${prediction?.signal === 'BUY' ? 'text-emerald-400' : prediction?.signal === 'SELL' ? 'text-rose-400' : 'text-slate-200'}`}>
+                <div className={`text-[2.5rem] font-black mb-2 tracking-tighter italic leading-none ${
+                  prediction?.signal?.includes('BUY') ? 'text-emerald-400' : 
+                  prediction?.signal?.includes('SELL') ? 'text-rose-400' : 
+                  'text-slate-200'
+                }`}>
                   {prediction?.signal}
                 </div>
                 <div className="inline-block px-4 py-1 bg-slate-950/60 rounded-full border border-white/10 text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-4">
                   Confidence: {((prediction?.confidence || 0) * 100).toFixed(0)}%
                 </div>
+                {prediction?.signal?.startsWith('STRONG') && (
+                  <p className="text-[8px] text-slate-500 font-black uppercase tracking-[0.2em] mt-3 animate-bounce">Institutional Confluence Detected</p>
+                )}
               </div>
             </div>
 
