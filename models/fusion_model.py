@@ -39,9 +39,9 @@ class MultimodalFusion:
         if xgb_checkpoint and os.path.exists(xgb_checkpoint):
             self.xgb_model.load_model(xgb_checkpoint)
 
-    def extract_features(self, price_sequence, recent_sentiment_scores):
+    def extract_features(self, price_sequence, recent_sentiment_scores, technicals=None):
         """
-        Combine LSTM output and sentiment signals into a feature vector.
+        Combine LSTM output, sentiment signals, and technical indicators into a feature vector.
         """
         # 1. Get LSTM prediction
         with torch.no_grad():
@@ -54,8 +54,15 @@ class MultimodalFusion:
         else:
             sent_avg = 0.0
             
-        # 3. Create feature vector: [lstm_pred, sent_avg]
-        return [lstm_pred, sent_avg]
+        # 3. Create feature vector: [lstm_pred, sent_avg, rsi, adx, cci]
+        features = [lstm_pred, sent_avg]
+        if technicals:
+            features.extend([
+                technicals.get('rsi', 50.0) / 100.0,
+                technicals.get('adx', 20.0) / 100.0,
+                technicals.get('cci', 0.0) / 200.0
+            ])
+        return features
 
     def predict(self, feature_vector, rsi=50):
         """
