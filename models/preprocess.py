@@ -66,11 +66,44 @@ def calculate_technical_indicators(df):
     true_range = np.max(ranges, axis=1)
     df['ATR_14'] = true_range.rolling(14).mean()
 
-    # 6. VWAP (Volume Weighted Average Price) - Benchmark
-    # Simple calculation for daily data (Typical Price * Volume / Total Volume)
+    # 6. VWAP (Volume Weighted Average Price)
     df['Typical_Price'] = (df['high'] + df['low'] + df['close']) / 3
     df['VWAP'] = (df['Typical_Price'] * df['volume']).cumsum() / df['volume'].cumsum()
     
+    # 7. ADX (Average Directional Index) - Trend Strength
+    plus_dm = df['high'].diff()
+    minus_dm = df['low'].diff()
+    plus_dm[plus_dm < 0] = 0
+    minus_dm[minus_dm > 0] = 0
+    minus_dm = np.abs(minus_dm)
+    
+    tr_14 = true_range.rolling(14).sum()
+    plus_di = 100 * (plus_dm.rolling(14).sum() / tr_14)
+    minus_di = 100 * (minus_dm.rolling(14).sum() / tr_14)
+    dx = 100 * np.abs(plus_di - minus_di) / (plus_di + minus_di)
+    df['ADX_14'] = dx.rolling(14).mean()
+    
+    # 8. Ichimoku Cloud (Basic)
+    high_9 = df['high'].rolling(window=9).max()
+    low_9 = df['low'].rolling(window=9).min()
+    df['Ichimoku_Tenkan'] = (high_9 + low_9) / 2
+    
+    high_26 = df['high'].rolling(window=26).max()
+    low_26 = df['low'].rolling(window=26).min()
+    df['Ichimoku_Kijun'] = (high_26 + low_26) / 2
+    
+    # 9. Bollinger Band Width
+    df['BB_Width'] = (df['BB_Upper'] - df['BB_Lower']) / df['BB_Mid']
+    
+    # 10. CCI (Commodity Channel Index)
+    tp = (df['high'] + df['low'] + df['close']) / 3
+    sma_tp = tp.rolling(window=20).mean()
+    mad_tp = tp.rolling(window=20).apply(lambda x: np.abs(x - x.mean()).mean())
+    df['CCI_20'] = (tp - sma_tp) / (0.015 * mad_tp)
+    
+    # 11. OBV (On-Balance Volume)
+    df['OBV'] = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
+
     return df
 
 def prepare_lstm_data(df, window_size=60, feature_cols=['close', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']):
