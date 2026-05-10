@@ -19,92 +19,83 @@ from db.schema import get_session, Stock, HistoricalPrice
 from models.preprocess import calculate_technical_indicators
 from intelligence.prediction_service import PredictionService
 
-def run_audit(ticker, days=7):
+def run_audit(ticker, days=90): # Test over last 3 months
     session = get_session()
     try:
         stock = session.query(Stock).filter_by(ticker=ticker).first()
         if not stock: return None
         
-        # 1. Fetch full history for calculations
+        # Fetch history
         prices = pd.read_sql(
             session.query(HistoricalPrice).filter_by(stock_id=stock.id).order_by(HistoricalPrice.date.asc()).statement,
             session.bind
         )
         
-        if len(prices) < 100: return None
+        if len(prices) < 150: return None
+        
+        # OPTIMIZATION: Calculate all indicators ONCE for the full history
+        # Since these are look-back indicators, they are leak-free at any index T
+        prices = calculate_technical_indicators(prices)
         
         audit_results = []
         
-        # 2. Walk-forward testing (Loop through the last N days)
-        # We start from 'days' ago and stop 1 day before current to allow outcome check
-        for i in range(days, 1, -1):
-            # Target date for signal generation
-            # Slice data: Only everything BEFORE (and including) this day
+        # Walk-forward with a 20-day (1 month) outcome window
+        for i in range(days + 20, 21, -1):
             cut_off_idx = len(prices) - i
-            historical_slice = prices.iloc[:cut_off_idx+1].copy()
-            target_date = historical_slice.iloc[-1]['date']
+            target_row = prices.iloc[cut_off_idx]
+            target_date = target_row['date']
             
-            # Outcome window: 1-3 days AFTER the cut_off
-            outcome_slice = prices.iloc[cut_off_idx+1 : cut_off_idx+4]
-            if outcome_slice.empty: continue
+            # Outcome window: Next 20 Trading Days
+            outcome_slice = prices.iloc[cut_off_idx+1 : cut_off_idx+21]
+            if len(outcome_slice) < 5: continue
             
-            current_price = historical_slice.iloc[-1]['close']
-            next_price = outcome_slice.iloc[0]['close']
-            max_future = outcome_slice['high'].max()
+            current_price = float(target_row['close'])
+            max_future = float(outcome_slice['high'].max())
+            min_future = float(outcome_slice['low'].min())
+            end_price = float(outcome_slice.iloc[-1]['close'])
             
-            # Generate Signal using the logic (Rule-based or Model)
-            # For audit, we'll manually apply the logic from PredictionService to ensure no leakage
-            # or we can mock the PredictionService to use this slice.
-            
-            # Calculate Indicators on the slice ONLY
-            tech_df = calculate_technical_indicators(historical_slice)
-            latest = tech_df.iloc[-1]
-            
-            # Extract confluence score (Synced with PredictionService refinement)
+            # --- SWING LOGIC ---
             score = 0
-            rsi = latest['RSI_14']
-            sma_20 = latest['SMA_20']
-            adx = latest.get('ADX_14', 0)
-            cci = latest.get('CCI_20', 0)
-            macd = latest.get('MACD', 0)
-            macd_signal = latest.get('MACD_Signal', 0)
-            vwap = latest.get('VWAP', 0)
-            tenkan = latest.get('Ichimoku_Tenkan', 0)
-            kijun = latest.get('Ichimoku_Kijun', 0)
+            rsi = target_row['RSI_14']
+            sma_20 = target_row['SMA_20']
+            sma_50 = target_row['SMA_50']
+            vwap = target_row.get('VWAP', 0)
+            adx = target_row.get('ADX_14', 0)
             
-            if rsi < 30: score += 2
-            if rsi > 70: score -= 2
+            # Bullish: Trend Alignment + Momentum
+            if current_price > sma_50: score += 2
+            if current_price > vwap: score += 1
+            if rsi > 50 and rsi < 70: score += 1
+            if adx > 20: score += 1
             
-            if adx > 25:
-                if current_price > sma_20: score += 1
-                elif current_price < sma_20: score -= 1
+            # Bearish: Breakdown + Exhaustion
+            if current_price < sma_20: score -= 2
+            if rsi > 75: score -= 2
+            if current_price < vwap: score -= 1
             
-            if cci > 150: score += 1
-            if cci < -150: score -= 1
+            signal = "BUY" if score >= 3 else ("SELL" if score <= -3 else "HOLD")
             
-            if current_price > tenkan and tenkan > kijun: score += 2
-            if current_price < tenkan and tenkan < kijun: score -= 2
-            
-            if score < 0:
-                if current_price < vwap: score -= 1
-                if macd < macd_signal: score -= 1
-                if rsi < 35: score += 2 # Oversold protection
-            
-            signal = "BUY" if score >= 2 else ("SELL" if score <= -3 else "HOLD")
-            
-            # Verification: Was the signal correct?
-            # BUY is correct if price goes up in the next 1-3 days
             is_correct = False
-            if signal == "BUY" and max_future > current_price: is_correct = True
-            elif signal == "SELL" and next_price < current_price: is_correct = True
-            elif signal == "HOLD": is_correct = True # Neutral
+            profit_potential = ((max_future - current_price) / current_price) * 100
+            max_drawdown = ((min_future - current_price) / current_price) * 100
+            month_return = ((end_price - current_price) / current_price) * 100
+            
+            if signal == "BUY":
+                if profit_potential > 5.0: is_correct = True
+                elif month_return > 2.0: is_correct = True
+            elif signal == "SELL":
+                if month_return < -2.0: is_correct = True
+            elif signal == "HOLD":
+                if abs(month_return) < 3.0: is_correct = True
             
             audit_results.append({
                 "date": target_date.strftime('%Y-%m-%d'),
                 "price": current_price,
                 "signal": signal,
                 "score": score,
-                "next_day": next_price,
+                "max_profit": profit_potential,
+                "max_dd": max_drawdown,
+                "month_ret": month_return,
                 "win": is_correct
             })
             
@@ -127,22 +118,14 @@ def run_bulk_audit(output_file="data_exports/signal_audit_report.csv", limit=Non
         res = run_audit(stock.ticker)
         if res:
             for r in res:
-                # Calculate return % for the signal
-                # For BUY: (NextDay - Price) / Price
-                # For SELL: (Price - NextDay) / Price
-                ret = 0.0
-                if r['signal'] == 'BUY':
-                    ret = (r['next_day'] - r['price']) / r['price']
-                elif r['signal'] == 'SELL':
-                    ret = (r['price'] - r['next_day']) / r['price']
-                
-                r['return_pct'] = float(ret * 100)
+                # Use the pre-calculated month_ret from run_audit
+                r['return_pct'] = r['month_ret']
                 r['ticker'] = stock.ticker
                 all_results.append(r)
                 
     if all_results:
         df = pd.DataFrame(all_results)
-        cols = ['ticker', 'date', 'price', 'signal', 'score', 'next_day', 'return_pct', 'win']
+        cols = ['ticker', 'date', 'price', 'signal', 'score', 'month_ret', 'max_profit', 'max_dd', 'win']
         df = df[cols]
         
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -172,7 +155,7 @@ def run_bulk_audit(output_file="data_exports/signal_audit_report.csv", limit=Non
             precision = (sig_df['win'].sum() / len(sig_df)) * 100
             
             # Avg Return
-            avg_ret = sig_df['return_pct'].mean()
+            avg_ret = sig_df['month_ret'].mean()
             
             print(f"{sig:6} | Precision: {precision:5.1f}% | Avg Return: {avg_ret:6.2f}% | Count: {len(sig_df)}")
             
@@ -184,7 +167,7 @@ def run_bulk_audit(output_file="data_exports/signal_audit_report.csv", limit=Non
             })
             
         # Overall Profit Factor (Simulated)
-        total_ret = df[df['signal'] != 'HOLD']['return_pct'].sum()
+        total_ret = df[df['signal'] != 'HOLD']['month_ret'].sum()
         print(f"\nSimulated Week Alpha: {total_ret:.2f}% (Cumulative across universe)")
         print("="*50)
         
