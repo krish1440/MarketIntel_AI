@@ -6,7 +6,7 @@ This module defines the relational mapping (ORM) for the entire MarketIntel
 AI ecosystem using SQLAlchemy. It establishes the schema for stocks, price
 history, real-time quotes, news sentiment, watchlists, and triggered alerts.
 """
-from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, BIGINT, DateTime, Date, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DECIMAL, BIGINT, DateTime, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
@@ -21,6 +21,14 @@ class Stock(Base):
     name = Column(String(100))
     nse_symbol = Column(String(20)) # e.g. RELIANCE.NS
     bse_symbol = Column(String(20)) # e.g. 500325.BO
+    
+    # Fundamental Data
+    pe_ratio = Column(DECIMAL(10, 2), nullable=True)
+    market_cap = Column(BIGINT, nullable=True)
+    eps = Column(DECIMAL(10, 2), nullable=True)
+    revenue_growth = Column(DECIMAL(10, 4), nullable=True)
+    debt_to_equity = Column(DECIMAL(10, 4), nullable=True)
+    sector = Column(String(50), nullable=True)
 
 class LiveQuote(Base):
     """Stores high-frequency price snapshots for active market monitoring."""
@@ -57,6 +65,19 @@ class NewsArticle(Base):
     published_at = Column(DateTime)
     sentiment_score = Column(DECIMAL(10, 4), nullable=True)
 
+class HistoricalFundamentals(Base):
+    """Time-series storage for fundamental metrics to track valuation trends."""
+    __tablename__ = 'historical_fundamentals'
+    __table_args__ = (UniqueConstraint('stock_id', 'date', name='_stock_date_uc'),)
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey('stocks.id'))
+    date = Column(Date, default=datetime.date.today)
+    pe_ratio = Column(DECIMAL(10, 2))
+    eps = Column(DECIMAL(10, 2))
+    market_cap = Column(BIGINT)
+    revenue_growth = Column(DECIMAL(10, 4))
+    debt_to_equity = Column(DECIMAL(10, 4))
+    
 class Watchlist(Base):
     """User-defined monitoring thresholds for specific equities."""
     __tablename__ = 'watchlists'
@@ -79,13 +100,25 @@ class Alert(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 
+# Global engine singleton to prevent connection pool exhaustion
+_engine = None
+
 def get_engine():
-    """Returns a SQLAlchemy engine instance connected to the stock_intelligence database."""
-    DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
-    return create_engine(DATABASE_URL)
+    """Returns the global SQLAlchemy engine instance."""
+    global _engine
+    if _engine is None:
+        DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
+        # Increased pool size and max overflow for institutional bulk loads
+        _engine = create_engine(
+            DATABASE_URL, 
+            pool_size=10, 
+            max_overflow=20,
+            pool_recycle=3600
+        )
+    return _engine
 
 def get_session():
-    """Initializes and returns a new SQLAlchemy session for database operations."""
+    """Initializes and returns a new SQLAlchemy session from the shared engine."""
     engine = get_engine()
     Session = sessionmaker(bind=engine)
     return Session()
