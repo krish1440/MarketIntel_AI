@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 export async function getStocks(page: number = 1, limit: number = 50, search: string = "") {
   const url = new URL(`${API_BASE}/stocks`);
@@ -46,12 +46,11 @@ export async function addToWatchlist(stockId: number, targetAbove?: number, targ
 
 
 export async function removeFromWatchlist(stockId: number) {
-  const res = await fetch(`${API_BASE}/watchlist/${stockId}`, { method: "DELETE" });
-  return res.json();
+    const res = await fetch(`${API_BASE}/watchlist/${stockId}`, { method: "DELETE" });
+    return res.json();
 }
 
 export async function getAlerts() {
   const res = await fetch(`${API_BASE}/alerts`);
   return res.json();
 }
-

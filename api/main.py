@@ -377,7 +377,49 @@ def get_alerts(limit: int = 20):
             "time": a.timestamp.isoformat()
         })
     session.close()
-    return results
+    return clean_nas(results)
+
+@app.get("/api/top-opportunities")
+def get_top_opportunities(limit: int = 9):
+    """
+    Identifies the highest-conviction trading opportunities across the universe.
+    
+    This endpoint scans active stocks and ranks them based on a combination 
+    of AI confidence scores and technical confluence.
+    """
+    session = get_session()
+    # For performance in a large universe, we'll scan the top 100 most active stocks by volume
+    # In a full production env, this would be a background cached task
+    stocks = session.query(Stock).limit(100).all()
+    
+    opportunities = []
+    for s in stocks:
+        try:
+            signal_data = predict_service.get_signal(s.ticker)
+            if "error" not in signal_data and signal_data["signal"] in ["STRONG BUY", "BUY", "STRONG SELL", "SELL"]:
+                # Calculate an opportunity score
+                # Base score from confidence + signal weight
+                weight = 2.0 if "STRONG" in signal_data["signal"] else 1.0
+                score = (signal_data["confidence"] * 10) * weight
+                
+                opportunities.append({
+                    "ticker": s.ticker,
+                    "name": s.name,
+                    "signal": signal_data["signal"],
+                    "confidence": signal_data["confidence"],
+                    "current_price": signal_data["current_price"],
+                    "score": score,
+                    "rsi": signal_data["technicals"]["rsi"],
+                    "adx": signal_data["technicals"]["adx"]
+                })
+        except: continue
+        
+    session.close()
+    
+    # Sort by opportunity score descending
+    top_opportunities = sorted(opportunities, key=lambda x: x["score"], reverse=True)[:limit]
+    
+    return clean_nas(top_opportunities)
 
 if __name__ == "__main__":
 

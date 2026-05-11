@@ -32,11 +32,17 @@ export default function MarketClient() {
   useEffect(() => {
     setLoading(true);
     fetchWatchlist();
-    getStocks(page, limit, search).then(data => {
-      setStocks(data.stocks || []);
-      setTotal(data.total || 0);
-      setLoading(false);
-    });
+    getStocks(page, limit, search)
+      .then(data => {
+        setStocks(data.stocks || []);
+        setTotal(data.total || 0);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Critical: Failed to sync Market Data:", err);
+        setStocks([]);
+        setLoading(false);
+      });
   }, [page, search]);
 
   const handleWatchClick = (e: any, stock: any) => {
@@ -98,7 +104,13 @@ export default function MarketClient() {
             </div>
           </div>
 
-          <div className="text-right hidden xl:block">
+          <div className="text-right hidden xl:block space-y-3">
+            <Link href="/opportunities" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-500/20 transition-all group">
+              <svg className="w-3.5 h-3.5 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Top Opportunities
+            </Link>
             <div className="bg-slate-900/40 border border-slate-800/60 p-4 rounded-3xl backdrop-blur-md">
               <span className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-600 block mb-2 italic">Global Coverage Spectrum</span>
               <span className="text-emerald-400 text-xl font-mono font-black flex items-center justify-end tracking-tighter">

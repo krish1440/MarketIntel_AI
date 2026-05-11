@@ -225,6 +225,31 @@ export default function StockDetailClient() {
           </div>
 
           <div className="space-y-6">
+            {/* Fundamental Analysis Card */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[3rem] p-8 backdrop-blur-xl relative overflow-hidden group">
+              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <BarChart3 className="w-3 h-3 text-indigo-400" /> Fundamental Health
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                  <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">P/E Ratio</span>
+                  <span className="text-xl font-mono font-black text-white">{prediction?.fundamentals?.pe_ratio || 'N/A'}</span>
+                </div>
+                <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
+                  <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Sector</span>
+                  <span className="text-xs font-black text-indigo-400 truncate block">{prediction?.fundamentals?.sector || 'Industrial'}</span>
+                </div>
+              </div>
+              <div className="mt-4 p-4 bg-black/20 rounded-2xl border border-white/5 flex justify-between items-center">
+                <span className="text-[8px] text-slate-500 font-bold uppercase">Value Grade</span>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
+                  (prediction?.fundamentals?.pe_ratio < 20) ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                }`}>
+                  {(prediction?.fundamentals?.pe_ratio < 20) ? 'UNDERVALUED' : 'FAIR VALUE'}
+                </span>
+              </div>
+            </div>
+
             {/* Master Signal Card */}
             <div className={`bg-gradient-to-br p-8 rounded-[3rem] border border-white/5 backdrop-blur-xl relative overflow-hidden group transition-all duration-500 ${
               prediction?.signal?.includes('BUY') ? 'from-emerald-900/40 to-slate-900/40 shadow-[0_0_50px_-12px_rgba(52,211,153,0.3)]' : 
@@ -252,6 +277,46 @@ export default function StockDetailClient() {
                 {prediction?.signal?.startsWith('STRONG') && (
                   <p className="text-[8px] text-slate-500 font-black uppercase tracking-[0.2em] mt-3 animate-bounce">Institutional Confluence Detected</p>
                 )}
+              </div>
+            </div>
+            
+            {/* Automated Risk Management Card */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[3rem] p-8 backdrop-blur-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_#a855f7]"></div>
+              </div>
+              <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <ShieldAlert className="w-3 h-3 text-purple-400" /> Risk Guard (ATR)
+              </h2>
+              <div className="space-y-6">
+                <div className="flex justify-between items-end p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl hover:border-emerald-500/30 transition-all">
+                  <div>
+                    <span className="text-[8px] font-black text-emerald-500/70 uppercase tracking-tighter">Profit Target (TP)</span>
+                    <p className="text-xl font-black text-emerald-400">₹{prediction?.risk_management?.take_profit?.toLocaleString() || '---'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-emerald-500">
+                      {prediction?.current_price ? `+${(((prediction.risk_management?.take_profit / prediction.current_price) - 1) * 100).toFixed(1)}%` : '--'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-end p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl hover:border-rose-500/30 transition-all">
+                  <div>
+                    <span className="text-[8px] font-black text-rose-500/70 uppercase tracking-tighter">Stop Loss (SL)</span>
+                    <p className="text-xl font-black text-rose-400">₹{prediction?.risk_management?.stop_loss?.toLocaleString() || '---'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-rose-500">
+                      {prediction?.current_price ? `${(((prediction.risk_management?.stop_loss / prediction.current_price) - 1) * 100).toFixed(1)}%` : '--'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-between items-center text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                  <span>RR Ratio: 2:1</span>
+                  <span>ATR: {prediction?.risk_management?.atr_volatility?.toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
