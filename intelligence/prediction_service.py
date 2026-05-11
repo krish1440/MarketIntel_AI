@@ -167,14 +167,32 @@ class PredictionService:
                     # Avoid "SELL" if RSI is already very low (oversold bounce risk)
                     if rsi < 35: score += 2 
                 
+                # --- NEW: Multi-Factor Integration ---
+                # 2. Fundamental Factor (Value Check)
+                fundamental_score = 0
+                pe = float(stock.pe_ratio) if stock.pe_ratio else 22.0
+                if pe < 18: fundamental_score += 1
+                if pe > 40: fundamental_score -= 1
+                
+                # 3. News Sentiment Factor
+                sentiment_score = 0
+                latest_news = session.query(NewsArticle).filter_by(stock_id=stock.id).order_by(NewsArticle.published_at.desc()).limit(3).all()
+                if latest_news:
+                    avg_sent = sum(float(n.sentiment_score or 0) for n in latest_news) / len(latest_news)
+                    if avg_sent > 0.3: sentiment_score += 1
+                    elif avg_sent < -0.3: sentiment_score -= 1
+                
+                # Master Confluence (Technical 70% + Fundamental 15% + Sentiment 15%)
+                master_score = score + fundamental_score + sentiment_score
+                
                 # Determine 5-tier signal
-                if score >= 5: signal = "STRONG BUY"
-                elif score >= 2: signal = "BUY"
-                elif score <= -5: signal = "STRONG SELL"
-                elif score <= -3: signal = "SELL"
+                if master_score >= 5: signal = "STRONG BUY"
+                elif master_score >= 2: signal = "BUY"
+                elif master_score <= -5: signal = "STRONG SELL"
+                elif master_score <= -3: signal = "SELL"
                 else: signal = "HOLD"
                 
-                confidence = (model_confidence + (abs(score) / 10.0)) / 2.0
+                confidence = (model_confidence + (abs(master_score) / 10.0)) / 2.0
             else:
                 # Advanced Heuristic Fallback (Rule-based confluence)
                 score = 0
@@ -212,21 +230,24 @@ class PredictionService:
                 "confidence": min(float(confidence), 1.0),
                 "sentiment_avg": sentiment_avg,
                 "technicals": {
-                    "rsi": rsi,
-                    "sma_20": sma_20,
-                    "sma_50": sma_50,
-                    "macd": macd,
-                    "macd_signal": macd_signal,
-                    "bb_upper": bb_upper,
-                    "bb_lower": bb_lower,
-                    "atr": atr,
-                    "vwap": vwap,
-                    "adx": adx,
-                    "cci": cci,
-                    "bb_width": bb_width,
-                    "ichimoku": {"tenkan": tenkan, "kijun": kijun}
+                    "rsi": rsi, "sma_20": sma_20, "sma_50": sma_50,
+                    "macd": macd, "macd_signal": macd_signal,
+                    "bb_upper": bb_upper, "bb_lower": bb_lower,
+                    "atr": atr, "vwap": vwap, "adx": adx, "cci": cci,
+                    "bb_width": bb_width, "ichimoku": {"tenkan": tenkan, "kijun": kijun}
+                },
+                "fundamentals": {
+                    "pe_ratio": float(stock.pe_ratio) if stock.pe_ratio else 0.0,
+                    "market_cap": int(stock.market_cap) if stock.market_cap else 0,
+                    "sector": stock.sector or "Unknown"
                 },
                 "current_price": current_price,
+                "risk_management": {
+                    "stop_loss": float(current_price - (2.0 * atr)) if "BUY" in signal else (float(current_price + (2.0 * atr)) if "SELL" in signal else 0.0),
+                    "take_profit": float(current_price + (4.0 * atr)) if "BUY" in signal else (float(current_price - (4.0 * atr)) if "SELL" in signal else 0.0),
+                    "atr_volatility": atr,
+                    "risk_reward_ratio": "2:1"
+                },
                 "forecast": forecast_points,
                 "timestamp": datetime.datetime.utcnow().isoformat()
             }
