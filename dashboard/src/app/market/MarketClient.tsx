@@ -184,7 +184,7 @@ export default function MarketClient() {
         stock={activeStock}
         onSave={handleSaveWatchlist}
         onRemove={handleRemoveWatchlist}
-        isAlreadyInWatchlist={activeStock ? watchlist.includes(activeStock.id) : false}
+        isWatched={activeStock ? watchlist.includes(activeStock.id) : false}
       />
     </main>
   );
