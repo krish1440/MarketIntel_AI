@@ -14,6 +14,7 @@ Key Features:
 """
 
 import yfinance as yf
+import pandas as pd
 import time
 import sys
 import os
@@ -65,23 +66,36 @@ def poll_prices():
                     open_data = data_n['Open'] if 'Open' in data_n else close_data
                     
                     for stock_sym in chunk:
-                        if stock_sym in close_data:
-                            series = close_data[stock_sym].dropna()
+                        try:
+                            # Handle both Single and Multi-ticker DataFrames
+                            if isinstance(close_data, pd.Series):
+                                # This happens if only one ticker was requested or returned
+                                if stock_sym in close_data.name: # name might be the ticker
+                                    series = close_data.dropna()
+                                else: continue
+                            else:
+                                # Multi-ticker DataFrame
+                                if stock_sym in close_data:
+                                    series = close_data[stock_sym].dropna()
+                                else: continue
+                                
                             if not series.empty:
                                 price = float(series.iloc[-1])
-                                # Find stock in current session's list
                                 stock = next((s for s in stocks if s.nse_symbol == stock_sym), None)
                                 if stock and not math.isnan(price):
-                                    prev_close = float(open_data[stock_sym].iloc[0])
-                                    change = ((price / prev_close) - 1) * 100 if prev_close else 0
+                                    # Use Open price from the same period for change calculation
+                                    start_price = float(open_data[stock_sym].iloc[0]) if not isinstance(open_data, pd.Series) else float(open_data.iloc[0])
+                                    change = ((price / start_price) - 1) * 100 if start_price else 0
                                     
                                     quote = LiveQuote(
                                         stock_id=stock.id, exchange='NSE',
                                         price=price, change_percent=change
                                     )
                                     session.add(quote)
-                                    # Check for watchlist alerts
                                     alert_mgr.check_price_alerts(stock.id, price, stock.ticker)
+                        except Exception as e:
+                            print(f"Error processing {stock_sym}: {e}")
+                            continue
 
                 session.commit()
 
@@ -94,22 +108,32 @@ def poll_prices():
                     open_data_b = data_b['Open'] if 'Open' in data_b else close_data_b
                     
                     for stock_sym in chunk:
-                        if stock_sym in close_data_b:
-                            series = close_data_b[stock_sym].dropna()
+                        try:
+                            if isinstance(close_data_b, pd.Series):
+                                if stock_sym in close_data_b.name:
+                                    series = close_data_b.dropna()
+                                else: continue
+                            else:
+                                if stock_sym in close_data_b:
+                                    series = close_data_b[stock_sym].dropna()
+                                else: continue
+                                
                             if not series.empty:
                                 price = float(series.iloc[-1])
                                 stock = next((s for s in stocks if s.bse_symbol == stock_sym), None)
                                 if stock and not math.isnan(price):
-                                    prev_close = float(open_data_b[stock_sym].iloc[0])
-                                    change = ((price / prev_close) - 1) * 100 if prev_close else 0
+                                    start_price = float(open_data_b[stock_sym].iloc[0]) if not isinstance(open_data_b, pd.Series) else float(open_data_b.iloc[0])
+                                    change = ((price / start_price) - 1) * 100 if start_price else 0
                                     
                                     quote = LiveQuote(
                                         stock_id=stock.id, exchange='BSE',
                                         price=price, change_percent=change
                                     )
                                     session.add(quote)
-                                    # Check for watchlist alerts
                                     alert_mgr.check_price_alerts(stock.id, price, stock.ticker)
+                        except Exception as e:
+                            print(f"Error processing {stock_sym} (BSE): {e}")
+                            continue
 
                 session.commit()
 
