@@ -237,6 +237,7 @@ class PredictionService:
                     "bb_width": bb_width, "ichimoku": {"tenkan": tenkan, "kijun": kijun}
                 },
                 "fundamentals": {
+                    "name": stock.name or ticker,
                     "pe_ratio": float(stock.pe_ratio) if stock.pe_ratio else 0.0,
                     "market_cap": int(stock.market_cap) if stock.market_cap else 0,
                     "sector": stock.sector or "Unknown"
