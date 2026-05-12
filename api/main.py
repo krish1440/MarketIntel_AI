@@ -118,9 +118,9 @@ def list_stocks(
     
     results = []
     for s in stocks:
-        # Fetch the most recent price snapshot for the NSE exchange
+        # Fetch the most recent price snapshot across any available exchange
         latest = session.query(LiveQuote).filter_by(
-            stock_id=s.id, exchange='NSE'
+            stock_id=s.id
         ).order_by(LiveQuote.timestamp.desc()).first()
         
         results.append({
