@@ -23,8 +23,8 @@ export default function WatchlistModal({ stock, isOpen, onClose, onSave, onRemov
       <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold text-white">{stock.ticker} Monitoring</h2>
-            <p className="text-xs text-slate-500 uppercase tracking-widest mt-1">Set Alert Thresholds</p>
+            <h2 className="text-xl font-bold text-white line-clamp-1">{stock.name || stock.ticker} Monitoring</h2>
+            <p className="text-xs text-slate-500 uppercase tracking-widest mt-1">Set Alert Thresholds for {stock.ticker}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
