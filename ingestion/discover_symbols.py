@@ -95,9 +95,9 @@ def update_database():
         if not existing:
             new_stock = Stock(
                 ticker=sym,
-                name=f"{sym} (NSE)",
+                name=sym, # Default to ticker, cleaner than 'TICKER (NSE)'
                 nse_symbol=f"{sym}.NS",
-                bse_symbol=f"{sym}.BO" # Most NSE stocks share the same ticker on BSE
+                bse_symbol=f"{sym}.BO" 
             )
             session.add(new_stock)
             count_n += 1
