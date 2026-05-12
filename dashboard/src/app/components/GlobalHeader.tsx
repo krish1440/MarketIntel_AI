@@ -42,6 +42,7 @@ export default function GlobalHeader({ search, setSearch, modelStatus, totalStoc
               placeholder="Search symbol, index, or company name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              suppressHydrationWarning
               className="w-full bg-slate-950/50 border border-white/5 rounded-2xl py-3.5 px-14 focus:outline-none focus:border-indigo-500/30 focus:bg-slate-950/80 transition-all text-sm font-medium backdrop-blur-xl relative z-10 placeholder:text-slate-600 text-white"
             />
           </div>
