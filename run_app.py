@@ -64,7 +64,7 @@ def start_services():
 
     # 1. Database Layer
     subprocess.run(["docker-compose", "up", "-d"], check=True)
-    time.sleep(3)
+    time.sleep(10)
 
     # 2. API Layer (Port 8000)
     print("[API] Starting Backend Engine...")
@@ -91,7 +91,7 @@ def start_services():
     processes.append(subprocess.Popen([PYTHON_EXE, "intelligence/auto_learner.py"], creationflags=subprocess.CREATE_NEW_CONSOLE))
 
     print("\n" + "="*50)
-    print("🚀 MARKETINTEL AI IS LIVE")
+    print("MARKETINTEL AI IS LIVE")
     print("="*50)
     print(f"Dashboard: http://localhost:3000")
     print(f"API Docs:  http://localhost:8000/docs")
