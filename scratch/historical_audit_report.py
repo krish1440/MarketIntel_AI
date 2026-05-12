@@ -11,16 +11,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.schema import get_session, Stock, HistoricalPrice, HistoricalFundamentals, NewsArticle
 from models.preprocess import calculate_technical_indicators
 
-def run_leak_free_audit(ticker, start_date, end_date):
+def run_leak_free_audit(ticker, start_date, end_date, exchange="NSE"):
     session = get_session()
     stock = session.query(Stock).filter_by(ticker=ticker).first()
     if not stock: return None
 
-    print(f"--- Leak-Free System Audit: {ticker} ---")
-    
     # 1. Pre-calculate indicators (inherently leak-free at index T)
     all_prices = pd.read_sql(
-        session.query(HistoricalPrice).filter_by(stock_id=stock.id).order_by(HistoricalPrice.date.asc()).statement,
+        session.query(HistoricalPrice).filter_by(stock_id=stock.id, exchange=exchange).order_by(HistoricalPrice.date.asc()).statement,
         session.bind
     )
     all_prices = calculate_technical_indicators(all_prices)
@@ -100,9 +98,8 @@ def run_leak_free_audit(ticker, start_date, end_date):
     session.close()
     if audit_rows:
         df = pd.DataFrame(audit_rows)
-        print(df.to_string(index=False))
-        acc = (df['Win'] == "Win").sum() / len(df) * 100
-        print(f"\nAudit Accuracy: {acc:.1f}%")
+        return df
+    return None
 
 if __name__ == "__main__":
     run_leak_free_audit("TCS", "2026-04-01", "2026-04-20")
