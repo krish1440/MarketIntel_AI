@@ -36,8 +36,10 @@ export default function OpportunitiesClient() {
   const [radarData, setRadarData] = useState<RadarStock[]>([]);
   const [sentiment, setSentiment] = useState<SentimentArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     Promise.all([
       fetch('http://127.0.0.1:8000/api/top-opportunities').then(res => res.json()),
       fetch('http://127.0.0.1:8000/api/opportunities/radar').then(res => res.json()),
@@ -150,10 +152,10 @@ export default function OpportunitiesClient() {
               <div className="flex justify-between items-start mb-10 relative z-10">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-4xl font-black tracking-tighter group-hover:text-blue-400 transition-colors">{opp.ticker}</h2>
+                    <h2 className="text-2xl font-black tracking-tight group-hover:text-blue-400 transition-colors uppercase truncate max-w-[220px]">{opp.name || opp.ticker}</h2>
                     {opp.signal.includes('BUY') ? <TrendingUp className="w-5 h-5 text-emerald-500" /> : <TrendingDown className="w-5 h-5 text-rose-500" />}
                   </div>
-                  <p className="text-slate-500 font-bold text-sm tracking-tight truncate max-w-[180px] uppercase">{opp.name}</p>
+                  <p className="text-slate-400 font-bold text-xs tracking-widest uppercase">{opp.ticker}</p>
                 </div>
                 <div className={`px-5 py-2 rounded-2xl text-[10px] font-black tracking-[0.2em] uppercase border-2 shadow-lg transition-all ${
                   opp.signal.includes('BUY') 
@@ -258,7 +260,7 @@ export default function OpportunitiesClient() {
               </div>
               <h3 className="text-xl font-bold tracking-tight text-white mb-4 line-clamp-2 group-hover:text-blue-400 transition-colors">{s.title}</h3>
               <div className="flex justify-between items-center">
-                 <span className="text-[10px] text-slate-600 font-bold">{new Date(s.date).toLocaleString()}</span>
+                 <span className="text-[10px] text-slate-600 font-bold">{mounted ? new Date(s.date).toLocaleString() : ''}</span>
                  <ArrowRight className="w-4 h-4 text-slate-700 group-hover:translate-x-2 transition-transform" />
               </div>
             </a>
