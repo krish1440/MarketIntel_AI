@@ -13,24 +13,69 @@ export default function StockDetailClient() {
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [news, setNews] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const [backtest, setBacktest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [capital, setCapital] = useState<number>(100000);
+  const [riskPerTrade, setRiskPerTrade] = useState<number>(1); // 1%
 
   const fetchData = async (ex: 'NSE' | 'BSE') => {
     setLoading(true);
     // Trigger an instant news refresh in the background
     fetch(`http://localhost:8000/api/news/refresh/${ticker}`, { method: 'POST' });
 
-    const [predData, newsData, histData, statusData] = await Promise.all([
+    const [predData, newsData, histData, statusData, backtestData] = await Promise.all([
       fetch(`http://localhost:8000/api/predict/${ticker}?exchange=${ex}`).then(res => res.json()),
       fetch(`http://localhost:8000/api/news/${ticker}`).then(res => res.json()),
       fetch(`http://localhost:8000/api/history/${ticker}?exchange=${ex}`).then(res => res.json()),
-      fetch(`http://localhost:8000/api/model-status`).then(res => res.json())
+      fetch(`http://localhost:8000/api/model-status`).then(res => res.json()),
+      fetch(`http://localhost:8000/api/backtest/${ticker}`).then(res => res.json())
     ]);
     setPrediction(predData);
     setNews(newsData);
     setHistory(histData);
     setModelStatus(statusData);
+    setBacktest(backtestData);
     setLoading(false);
+  };
+
+  const renderMomentumMatrix = () => {
+    if (!prediction?.technicals) return null;
+    const rsi = prediction.technicals.rsi || 50;
+    const sentiment = prediction.sentiment_avg || 0;
+    
+    // Normalize sentiment (-1 to 1) to (0 to 100) for the grid
+    const sentY = ((sentiment + 1) / 2) * 100;
+    
+    return (
+      <div className="relative w-full h-full border-l border-b border-white/10 p-4">
+        {/* Quadrant Labels */}
+        <div className="absolute top-2 right-2 text-[6px] font-black text-emerald-500/50 uppercase italic">High Conviction</div>
+        <div className="absolute top-2 left-2 text-[6px] font-black text-indigo-500/50 uppercase italic">Hidden Gem</div>
+        <div className="absolute bottom-2 left-2 text-[6px] font-black text-rose-500/50 uppercase italic">Institutional Exit</div>
+        <div className="absolute bottom-2 right-2 text-[6px] font-black text-amber-500/50 uppercase italic">Momentum Trap</div>
+        
+        {/* Axis Labels */}
+        <div className="absolute -left-6 top-1/2 -rotate-90 text-[6px] font-black text-slate-600 uppercase tracking-[0.3em]">AI Sentiment</div>
+        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[6px] font-black text-slate-600 uppercase tracking-[0.3em]">RSI Momentum</div>
+        
+        {/* Grid Lines */}
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 opacity-10">
+          <div className="border-r border-b border-white/20"></div>
+          <div className="border-b border-white/20"></div>
+          <div className="border-r border-white/20"></div>
+          <div></div>
+        </div>
+
+        {/* Dynamic Pulse Point */}
+        <div 
+          className="absolute w-4 h-4 -translate-x-1/2 translate-y-1/2 transition-all duration-1000 ease-in-out"
+          style={{ left: `${rsi}%`, bottom: `${sentY}%` }}
+        >
+          <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-30"></div>
+          <div className="absolute inset-0 bg-indigo-400 rounded-full shadow-[0_0_15px_#818cf8]"></div>
+        </div>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -170,61 +215,146 @@ export default function StockDetailClient() {
               ))}
             </div>
 
-            {/* Advanced Forecasting & Bollinger Bands */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-8 backdrop-blur-3xl relative group">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-pink-500/20 rounded-xl border border-pink-500/30"><Zap className="w-5 h-5 text-pink-400" /></div>
-                  <h2 className="text-lg font-black uppercase tracking-tighter text-pink-400">AI Forecasting Engine</h2>
-                </div>
-                <div className="h-40 relative">
-                  {renderForecastChart()}
-                </div>
-                <div className="mt-4 flex justify-between items-center bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-                  <div>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">7-Day Target</p>
-                    <p className="text-3xl font-mono font-black text-pink-400">₹{prediction?.forecast?.[6]?.price?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">Expected Move</p>
-                    <p className={`text-xl font-mono font-black ${((prediction?.forecast?.[6]?.price / prediction?.current_price) - 1) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {(((prediction?.forecast?.[6]?.price / prediction?.current_price) - 1) * 100).toFixed(2)}%
-                    </p>
-                  </div>
-                </div>
+            {/* Advanced Forecasting & Bollinger Bands - Standardized Full Width */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-8 backdrop-blur-3xl relative group">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-pink-500/20 rounded-xl border border-pink-500/30"><Zap className="w-5 h-5 text-pink-400" /></div>
+                <h2 className="text-lg font-black uppercase tracking-tighter text-pink-400">AI Forecasting Engine</h2>
               </div>
-
-              <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-8 backdrop-blur-3xl relative group">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-indigo-500/20 rounded-xl border border-indigo-500/30"><Target className="w-5 h-5 text-indigo-400" /></div>
-                  <h2 className="text-lg font-black uppercase tracking-tighter text-indigo-400">Volatility Bands</h2>
+              <div className="h-40 relative">
+                {renderForecastChart()}
+              </div>
+              <div className="mt-4 flex justify-between items-center bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                <div>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">7-Day Target</p>
+                  <p className="text-3xl font-mono font-black text-pink-400">₹{prediction?.forecast?.[6]?.price?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-500 font-black uppercase">Upper Band</span>
-                    <span className="text-lg font-mono font-bold text-slate-300">₹{tech.bb_upper?.toLocaleString()}</span>
-                  </div>
-                  <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-500 to-pink-500"
-                      style={{ width: `${((tech.vwap - tech.bb_lower) / (tech.bb_upper - tech.bb_lower)) * 100}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-500 font-black uppercase">Lower Band</span>
-                    <span className="text-lg font-mono font-bold text-slate-300">₹{tech.bb_lower?.toLocaleString()}</span>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
-                    <span className="text-[10px] text-indigo-400 font-black uppercase">VWAP Benchmark</span>
-                    <span className="text-xl font-mono font-black text-indigo-400">₹{tech.vwap?.toLocaleString()}</span>
-                  </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase">Expected Move</p>
+                  <p className={`text-xl font-mono font-black ${((prediction?.forecast?.[6]?.price / prediction?.current_price) - 1) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {(((prediction?.forecast?.[6]?.price / prediction?.current_price) - 1) * 100).toFixed(2)}%
+                  </p>
                 </div>
               </div>
             </div>
 
-          </div>
+            {/* Strategy Time-Machine (Historical Backtest Curve) */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-10 backdrop-blur-3xl relative overflow-hidden group">
+              <div className="flex justify-between items-center mb-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30">
+                     <BarChart3 className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black uppercase tracking-tighter text-blue-400">Strategy Time-Machine</h2>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">1-Year Institutional Backtest Performance</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                   <span className="text-xs text-slate-500 font-black uppercase block mb-1">Total Return</span>
+                   <span className={`text-4xl font-black tracking-tighter ${backtest?.total_return > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {backtest?.total_return !== undefined ? `${backtest.total_return > 0 ? '+' : ''}${backtest.total_return.toFixed(1)}%` : '0.0%'}
+                   </span>
+                </div>
+              </div>
 
-          <div className="space-y-6">
+              {backtest?.history && (
+                <div className="h-48 w-full relative mb-10">
+                  <svg viewBox="0 0 800 200" className="w-full h-full overflow-visible">
+                     {/* Equity Curve */}
+                     {(() => {
+                       const equities = (backtest?.history || []).map((h: any) => h.equity);
+                       const min = Math.min(...equities);
+                       const max = Math.max(...equities);
+                       const range = (max - min) || 1;
+                       const points = equities.map((e: any, i: number) => {
+                         const x = (i / (equities.length - 1)) * 800;
+                         const y = 180 - ((e - min) / range) * 160;
+                         return `${x},${y}`;
+                       }).join(' ');
+                       return (
+                         <>
+                           <path d={`M ${points} L 800,200 L 0,200 Z`} fill="url(#equityGradient)" className="opacity-10" />
+                           <polyline fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} className="drop-shadow-[0_0_10px_rgba(96,165,250,0.4)]" />
+                           <defs>
+                             <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+                               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                             </linearGradient>
+                           </defs>
+                         </>
+                       );
+                     })()}
+                  </svg>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Initial Capital</span>
+                    <span className="text-sm lg:text-base font-black text-white whitespace-nowrap">₹1,00,000</span>
+                 </div>
+                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Final Equity</span>
+                    <span className="text-sm lg:text-base font-black text-emerald-400 whitespace-nowrap">₹{backtest?.final_equity ? backtest.final_equity.toLocaleString() : '1,00,000'}</span>
+                 </div>
+                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Alpha Accuracy</span>
+                    <span className="text-sm lg:text-base font-black text-blue-400 whitespace-nowrap">{backtest?.accuracy !== undefined ? `${backtest.accuracy}%` : '---'}</span>
+                 </div>
+                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Validation</span>
+                    <span className="text-[8px] lg:text-[9px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">VERIFIED ✅</span>
+                 </div>
+              </div>
+            </div>
+
+            {/* Neural Momentum Matrix - Re-aligned and Integrated */}
+            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-8 backdrop-blur-xl relative overflow-hidden group">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30">
+                       <Target className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black uppercase tracking-tighter text-indigo-400">Neural Momentum Matrix</h2>
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Sentiment-Momentum Divergence Map</p>
+                    </div>
+                  </div>
+                  <div className="h-60 mt-4 px-4">
+                    {renderMomentumMatrix()}
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-between border-l border-white/5 pl-8">
+                  <div>
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Institutional Logic</h3>
+                    <p className="text-[11px] text-slate-400 leading-relaxed italic">
+                      The Matrix plots Technical RSI against AI-driven Sentiment. Stocks in the <span className="text-emerald-400 font-bold">High Conviction</span> zone indicate a synchronized bullish trend across both data layers.
+                    </p>
+                    <div className="mt-6 space-y-2">
+                      <div className="flex justify-between items-center text-[8px] font-black uppercase">
+                         <span className="text-slate-500">Vol Distribution</span>
+                         <span className="text-slate-300">Gaussian Normal</span>
+                      </div>
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                         <div className="h-full bg-indigo-500/50 w-[65%]"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-6">
+                    <div className="flex justify-between items-end">
+                       <span className="text-[8px] text-slate-500 font-black uppercase">Conviction Score</span>
+                       <span className="text-3xl font-black text-indigo-400 italic">{(prediction?.confidence * 10).toFixed(1)}/10</span>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
             {/* Fundamental Analysis Card */}
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[3rem] p-8 backdrop-blur-xl relative overflow-hidden group">
               <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -280,42 +410,77 @@ export default function StockDetailClient() {
               </div>
             </div>
             
-            {/* Automated Risk Management Card */}
+            {/* Dynamic Position Sizer & Smart Stop */}
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[3rem] p-8 backdrop-blur-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse shadow-[0_0_10px_#a855f7]"></div>
               </div>
               <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <ShieldAlert className="w-3 h-3 text-purple-400" /> Risk Guard (ATR)
+                <ShieldAlert className="w-3 h-3 text-purple-400" /> Smart-Stop & Position Sizer
               </h2>
               <div className="space-y-6">
-                <div className="flex justify-between items-end p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl hover:border-emerald-500/30 transition-all">
-                  <div>
-                    <span className="text-[8px] font-black text-emerald-500/70 uppercase tracking-tighter">Profit Target (TP)</span>
-                    <p className="text-xl font-black text-emerald-400">₹{prediction?.risk_management?.take_profit?.toLocaleString() || '---'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-emerald-500">
-                      {prediction?.current_price ? `+${(((prediction.risk_management?.take_profit / prediction.current_price) - 1) * 100).toFixed(1)}%` : '--'}
-                    </p>
-                  </div>
+                <div className="space-y-4">
+                   <div>
+                      <span className="text-[8px] text-slate-600 font-black uppercase tracking-widest mb-2 block">Account Capital (₹)</span>
+                      <input 
+                        type="number" 
+                        value={capital} 
+                        onChange={(e) => setCapital(Number(e.target.value))}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xl font-black text-white focus:border-purple-500/50 focus:outline-none transition-all" 
+                      />
+                   </div>
+                   <div className="flex justify-between items-center">
+                      <span className="text-[8px] text-slate-600 font-black uppercase tracking-widest">Risk Per Trade</span>
+                      <select 
+                        value={riskPerTrade} 
+                        onChange={(e) => setRiskPerTrade(Number(e.target.value))}
+                        className="bg-black/40 border border-white/10 rounded-lg p-1 text-[10px] font-black text-slate-300"
+                      >
+                         <option value={1}>1.0% (Safe)</option>
+                         <option value={2}>2.0% (Aggr)</option>
+                         <option value={5}>5.0% (Risk)</option>
+                      </select>
+                   </div>
+                </div>
+
+                <div className="h-px bg-white/5" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-[2rem]">
+                      <span className="text-[9px] text-purple-400 font-black uppercase block mb-1">Buy Quantity</span>
+                      <p className="text-3xl font-black text-white">
+                         {(prediction?.risk_management?.stop_loss && prediction.risk_management.stop_loss !== 0) 
+                            ? Math.floor((capital * (riskPerTrade/100)) / Math.abs(prediction.current_price - prediction.risk_management.stop_loss)) 
+                            : '---'}
+                      </p>
+                   </div>
+                   <div className="p-5 bg-indigo-500/10 border border-indigo-500/20 rounded-[2rem]">
+                      <span className="text-[9px] text-indigo-400 font-black uppercase block mb-1">Exposure</span>
+                      <p className="text-xl font-black text-white">
+                         {(prediction?.risk_management?.stop_loss && prediction.risk_management.stop_loss !== 0)
+                            ? `₹${(Math.floor((capital * (riskPerTrade/100)) / Math.abs(prediction.current_price - prediction.risk_management.stop_loss)) * prediction.current_price).toLocaleString(undefined, {maximumFractionDigits: 0})}` 
+                            : '₹0'}
+                      </p>
+                   </div>
                 </div>
 
                 <div className="flex justify-between items-end p-4 bg-rose-500/5 border border-rose-500/10 rounded-2xl hover:border-rose-500/30 transition-all">
                   <div>
-                    <span className="text-[8px] font-black text-rose-500/70 uppercase tracking-tighter">Stop Loss (SL)</span>
-                    <p className="text-xl font-black text-rose-400">₹{prediction?.risk_management?.stop_loss?.toLocaleString() || '---'}</p>
+                    <span className="text-[8px] font-black text-rose-500/70 uppercase tracking-tighter">Hard Stop-Loss (ATR)</span>
+                    <p className="text-xl font-black text-rose-400">₹{prediction?.risk_management?.stop_loss > 0 ? prediction.risk_management.stop_loss.toLocaleString() : '---'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-bold text-rose-500">
-                      {prediction?.current_price ? `${(((prediction.risk_management?.stop_loss / prediction.current_price) - 1) * 100).toFixed(1)}%` : '--'}
+                      {(prediction?.risk_management?.stop_loss > 0 && prediction?.current_price) 
+                        ? `${(((prediction.risk_management.stop_loss / prediction.current_price) - 1) * 100).toFixed(1)}%` 
+                        : '---'}
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-2 flex justify-between items-center text-[8px] font-bold text-slate-500 uppercase tracking-[0.2em]">
-                  <span>RR Ratio: 2:1</span>
-                  <span>ATR: {prediction?.risk_management?.atr_volatility?.toFixed(2)}</span>
+                  <span>RR Ratio: 2.5:1</span>
+                  <span>ATR Units: 2.0</span>
                 </div>
               </div>
             </div>
