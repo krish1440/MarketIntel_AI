@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { getStocks, getWatchlist, addToWatchlist, removeFromWatchlist } from '@/lib/api';
 import Link from 'next/link';
 import WatchlistModal from '../components/WatchlistModal';
+import GlobalHeader from '../components/GlobalHeader';
 
 export default function MarketClient() {
   const [stocks, setStocks] = useState<any[]>([]);
   const [watchlist, setWatchlist] = useState<number[]>([]);
+  const [modelStatus, setModelStatus] = useState<any>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -32,17 +34,20 @@ export default function MarketClient() {
   useEffect(() => {
     setLoading(true);
     fetchWatchlist();
-    getStocks(page, limit, search)
-      .then(data => {
-        setStocks(data.stocks || []);
-        setTotal(data.total || 0);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Critical: Failed to sync Market Data:", err);
-        setStocks([]);
-        setLoading(false);
-      });
+    
+    Promise.all([
+      getStocks(page, limit, search),
+      fetch('http://localhost:8000/api/model-status').then(res => res.json())
+    ]).then(([stocksData, statusData]) => {
+      setStocks(stocksData.stocks || []);
+      setTotal(stocksData.total || 0);
+      setModelStatus(statusData);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Critical: Failed to sync Market Data:", err);
+      setStocks([]);
+      setLoading(false);
+    });
   }, [page, search]);
 
   const handleWatchClick = (e: any, stock: any) => {
@@ -70,56 +75,13 @@ export default function MarketClient() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-50 p-8 pb-24">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-12 md:flex justify-between items-end gap-8">
-          <div className="relative group">
-            <Link href="/" className="flex items-center gap-4 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-indigo-500/20 blur-xl group-hover:bg-indigo-500/40 transition-colors rounded-full"></div>
-                <img src="/icon.png" alt="Logo" className="w-12 h-12 object-contain rounded-2xl relative z-10 shadow-2xl group-hover:scale-110 transition-all duration-500" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-black bg-gradient-to-r from-white via-slate-200 to-slate-500 bg-clip-text text-transparent tracking-tighter uppercase italic">
-                  MarketIntel AI
-                </h1>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-1">Institutional Intelligence Terminal</p>
-              </div>
-            </Link>
-          </div>
-          
-          <div className="mt-8 md:mt-0 flex-1 max-w-lg">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-indigo-500/5 blur-2xl group-focus-within:bg-indigo-500/10 transition-all rounded-[2rem]"></div>
-              <input 
-                type="text"
-                placeholder="Search symbol, index, or company name..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                suppressHydrationWarning
-                className="w-full bg-slate-900/40 border border-slate-800/80 rounded-[2rem] py-4 px-14 focus:outline-none focus:border-indigo-500/50 focus:bg-slate-900/60 transition-all text-sm font-medium backdrop-blur-xl relative z-10 placeholder:text-slate-600"
-              />
-              <svg className="w-5 h-5 text-slate-600 absolute left-5 top-1/2 -translate-y-1/2 z-20 group-focus-within:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="text-right hidden xl:block space-y-3">
-            <Link href="/opportunities" className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-500/20 transition-all group">
-              <svg className="w-3.5 h-3.5 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-              Top Opportunities
-            </Link>
-            <div className="bg-slate-900/40 border border-slate-800/60 p-4 rounded-3xl backdrop-blur-md">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-600 block mb-2 italic">Global Coverage Spectrum</span>
-              <span className="text-emerald-400 text-xl font-mono font-black flex items-center justify-end tracking-tighter">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full mr-3 animate-pulse shadow-[0_0_10px_#10b981]"></span>
-                {total.toLocaleString()} <span className="text-slate-500 text-xs ml-2">SYMBOLS</span>
-              </span>
-            </div>
-          </div>
-        </header>
+      <div className="max-w-7xl mx-auto">
+        <GlobalHeader 
+          search={search} 
+          setSearch={(val) => { setSearch(val); setPage(1); }} 
+          modelStatus={modelStatus} 
+          totalStocks={total} 
+        />
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
