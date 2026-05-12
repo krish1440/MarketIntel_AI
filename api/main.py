@@ -371,6 +371,7 @@ def get_alerts(limit: int = 20):
         results.append({
             "id": a.id,
             "ticker": stock.ticker if stock else "UNKNOWN",
+            "name": stock.name if stock.name else (stock.ticker if stock else "UNKNOWN"),
             "type": a.alert_type,
             "message": a.message,
             "value": float(a.trigger_value),

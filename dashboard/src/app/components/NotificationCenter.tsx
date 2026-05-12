@@ -24,8 +24,8 @@ export default function NotificationCenter() {
           const newAlert = data[0];
           
           if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(`MarketIntel Alert: ${newAlert.ticker}`, {
-              body: newAlert.message,
+            new Notification(`MarketIntel Alert: ${newAlert.name}`, {
+              body: `${newAlert.ticker}: ${newAlert.message}`,
               icon: '/icon.png'
             });
           }
@@ -73,9 +73,10 @@ export default function NotificationCenter() {
               alerts.map((alert) => (
                 <div key={alert.id} className="p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-indigo-400 font-bold text-xs">{alert.ticker}</span>
-                    <span className="text-[9px] text-slate-500">{new Date(alert.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-indigo-400 font-bold text-[10px] line-clamp-1 flex-1">{alert.name}</span>
+                    <span className="text-[9px] text-slate-500 ml-2">{new Date(alert.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
+                  <div className="text-[9px] text-slate-500 font-black uppercase tracking-tighter mb-1">{alert.ticker}</div>
                   <p className="text-[11px] text-slate-300 leading-relaxed">{alert.message}</p>
                 </div>
               ))
