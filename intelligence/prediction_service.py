@@ -243,10 +243,10 @@ class PredictionService:
                 },
                 "current_price": current_price,
                 "risk_management": {
-                    "stop_loss": float(current_price - (2.0 * atr)) if "BUY" in signal else (float(current_price + (2.0 * atr)) if "SELL" in signal else 0.0),
-                    "take_profit": float(current_price + (4.0 * atr)) if "BUY" in signal else (float(current_price - (4.0 * atr)) if "SELL" in signal else 0.0),
+                    "stop_loss": float(current_price - (2.0 * atr)),
+                    "take_profit": float(current_price + (5.0 * atr)), # 2.5 * 2.0 atr
                     "atr_volatility": atr,
-                    "risk_reward_ratio": "2:1"
+                    "risk_reward_ratio": "2.5:1"
                 },
                 "forecast": forecast_points,
                 "timestamp": datetime.datetime.utcnow().isoformat()
