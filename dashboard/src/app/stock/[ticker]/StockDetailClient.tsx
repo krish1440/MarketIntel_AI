@@ -17,6 +17,7 @@ export default function StockDetailClient() {
   const [loading, setLoading] = useState(true);
   const [capital, setCapital] = useState<number>(100000);
   const [riskPerTrade, setRiskPerTrade] = useState<number>(1); // 1%
+  const [mounted, setMounted] = useState(false);
 
   const fetchData = async (ex: 'NSE' | 'BSE') => {
     setLoading(true);
@@ -36,6 +37,10 @@ export default function StockDetailClient() {
     setModelStatus(statusData);
     setBacktest(backtestData);
     setLoading(false);
+    
+    if (predData?.fundamentals?.name) {
+      document.title = `${predData.fundamentals.name} | MarketIntel AI`;
+    }
   };
 
   const renderMomentumMatrix = () => {
@@ -79,7 +84,13 @@ export default function StockDetailClient() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchData(exchange);
+    const interval = setInterval(() => {
+      // Refresh in background
+      fetchData(exchange);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [ticker, exchange]);
 
   if (loading && !prediction) return (
@@ -182,8 +193,8 @@ export default function StockDetailClient() {
                       <Activity className="w-3 h-3" /> Live Analytics
                     </div>
                   </div>
-                  <h1 className="text-7xl font-black tracking-tighter italic text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-slate-500">
-                    {ticker}
+                  <h1 className="text-4xl lg:text-6xl font-black tracking-tighter italic text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-slate-500 line-clamp-2 leading-[1.1]">
+                    {prediction?.fundamentals?.name || ticker}
                   </h1>
                 </div>
                 <div className="text-right">
@@ -501,7 +512,7 @@ export default function StockDetailClient() {
                 </div>
                 <div className="pt-4 border-t border-slate-800">
                   <p className="text-[8px] text-slate-600 font-bold uppercase mb-2">Last Background Update</p>
-                  <p className="text-[10px] text-slate-400 font-mono">{modelStatus?.last_train ? new Date(modelStatus.last_train).toLocaleString() : 'Pending...'}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">{mounted && modelStatus?.last_train ? new Date(modelStatus.last_train).toLocaleString() : 'Pending...'}</p>
                 </div>
               </div>
             </div>
