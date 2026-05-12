@@ -87,7 +87,8 @@ class MultimodalFusion:
             pass
             
         # Advanced Heuristic Fallback (Multimodal Rule-based)
-        lstm_score, sent_avg = feature_vector
+        lstm_score = feature_vector[0]
+        sent_avg = feature_vector[1]
         
         # LSTM score is the predicted normalized close price.
         # We'll use a threshold-based signal if it's high/low
