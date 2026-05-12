@@ -107,7 +107,7 @@ def get_engine():
     """Returns the global SQLAlchemy engine instance."""
     global _engine
     if _engine is None:
-        DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:5433/stock_intelligence"
+        DATABASE_URL = "postgresql+pg8000://postgres:postgres@127.0.0.1:54333/stock_intelligence"
         # Increased pool size and max overflow for institutional bulk loads
         _engine = create_engine(
             DATABASE_URL, 
