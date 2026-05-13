@@ -57,5 +57,13 @@ python run_app.py
 *   **`.env`**: Contains environment-specific credentials and API keys.
 *   **`requirements.txt`**: Definitive list of institutional-grade dependencies.
 
+## 🛤️ 2026 Institutional Roadmap
+- [x] **Q1: Data Fidelity Phase**: Implement full-name recovery and cross-exchange price fallback.
+- [x] **Q1: Terminal Polish**: Refactor UI to 3-column high-density grid and background auto-refresh.
+- [ ] **Q2: Vector Intelligence**: Integrate Vector DB (ChromaDB) for semantic news search and similarity analysis.
+- [ ] **Q3: Mobile Pulse**: Launch React Native companion app for real-time mobile push notifications.
+- [ ] **Q4: Global Universe**: Expand ingestion to include NASDAQ and NYSE benchmarks.
+
 ---
 *Developed with excellence by the MarketIntel AI Group.*
+
