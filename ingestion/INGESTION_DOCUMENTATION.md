@@ -14,6 +14,8 @@ The ingestion engine is comprised of six specialized services designed for relia
 
 ### 2. ⚡ Real-Time Pipeline
 - **`poll_prices.py`**: A high-frequency poller that retrieves 1-minute interval price data. It updates the `live_quotes` table to drive the dashboard.
+    - **Robust Handling**: Supports both single-ticker and multi-ticker DataFrame structures to prevent polling failure on delisted or suspended symbols.
+    - **Cross-Exchange Fallback**: Automatically attempts to fetch BSE prices if NSE data is unavailable, ensuring maximum coverage for the full 2,300+ universe.
 
 ### 3. 📰 Intelligence & News
 - **`news_aggregator.py`**: A rotational scraper that monitors Google News RSS feeds. It performs dual-fetch (broad market vs specific ticker) and triggers the AI Sentiment model (DistilBERT) in real-time.
