@@ -57,9 +57,23 @@ The API follows a **Non-Blocking Orchestration** pattern. Instead of waiting for
 *   **Logic:** Retrieves a time-series array of closing prices for the last `X` days.
 *   **Integrity Guard:** Uses the `clean_nas` filter to ensure 100% JSON compliance for charting libraries.
 
+### **E. Alerting Layer (Followers Feed)**
+#### `GET /api/alerts`
+*   **Purpose:** Powers the Notification Center / Institutional Feed.
+*   **Logic:** Joins the `Alert` table with `Stock` to return a human-readable stream of events.
+*   **Institutional Data**: Now returns the **full company name** instead of just ticker symbols for improved recognition.
+
 ---
 
-## 🛡️ 4. Resilience & Reliability (The "Safety Valves")
+## 🏛️ 4. Institutional Payload Extensions (V2)
+The API has been extended to support the "Company-Name Priority" initiative:
+- **Prediction Payload**: The `fundamentals` object now includes a verified `name` field.
+- **Stock List**: The `list_stocks` endpoint now performs a **Cross-Exchange Fallback** (trying NSE first, then BSE) to ensure 100% price availability.
+- **Hydration Guard**: Enhanced `clean_nas` filters to handle deep-nested company metadata safely.
+
+---
+
+## 🛡️ 5. Resilience & Reliability (The "Safety Valves")
 
 ### **The NaN Guard (`clean_nas`)**
 Financial data is messy. APIs often crash on `NaN` (Not a Number) values from broken feed data. Our API uses a recursive `clean_nas` filter that sanitizes every JSON response, ensuring the frontend never sees a "Hydration Error" or "Value Type" crash.
