@@ -109,8 +109,14 @@ Upon first deployment, `init.sql` automatically populates the `stocks` table wit
 ### 2. Delta Sync Logic
 The `historical_prices` table is populated via the `ingestion/delta_update.py` service. It uses the `UNIQUE` constraint to perform **Upserts** (Insert or Update on Conflict), allowing the system to fill "gaps" in data without creating duplicates.
 
-### 3. Real-Time Updates
-The `live_quotes` table acts as a high-speed buffer, frequently updated by `ingestion/poll_prices.py` to drive the frontend dashboard.
+### 3. Full-Name Normalization (Institutional Recovery)
+Initially, many stocks are seeded with only their ticker symbols or generic suffixes like `(NSE)`. The `scripts/fix_stock_names.py` service performs a deep-audit against Yahoo Finance metadata to recover official company names (e.g., transforming `TCS` to `Tata Consultancy Services Limited`). 
+
+*   **Logic**: Iterates through the `stocks` table, fetches `longName` via `yfinance`, and updates the `name` column.
+*   **Safety**: Implements fallback logic to keep the original ticker if a legal name is not retrievable.
+
+### 4. Real-Time Updates
+The `live_quotes` table acts as a high-speed buffer, frequently updated by `ingestion/poll_prices.py` to drive the frontend dashboard. Snapshot history is managed by the `trigger_value` logic in the `alerts` table for event-driven monitoring.
 
 ---
 
