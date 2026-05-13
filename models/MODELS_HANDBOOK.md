@@ -22,6 +22,7 @@ The predictive engine relies on a **Multimodal Fusion Engine** that blends two d
 ### 3. The Fusion Classifier (XGBoost)
 *   **File:** `fusion_model.py`
 *   **Purpose:** Acts as the final decision layer. It takes the output from the LSTM and the average sentiment score from DistilBERT, then classifies the final state as `1` (BUY) or `0` (SELL/HOLD).
+*   **Contextual Intelligence**: The fusion layer now accounts for sector-specific volatility and institutional naming context to improve the relevance of the final signal for high-cap equities.
 
 ---
 
