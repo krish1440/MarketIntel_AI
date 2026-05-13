@@ -9,7 +9,16 @@ The dashboard is a high-performance Next.js application built to provide institu
 *   **Framework**: Next.js 15 (App Router).
 *   **Styling**: TailwindCSS with custom glassmorphism and motion variants.
 *   **State Management**: React Hooks + Server Components for data fetching.
-*   **Real-Time**: Polling mechanisms synchronized with the backend ingestion heartbeat.
+*   **Real-Time**: 30-second background polling synchronized with the backend ingestion heartbeat.
+*   **Institutional Layout**: Optimized 3-column grid for high-density information display.
+
+---
+
+## 🏛️ Institutional Terminal V2 Standards
+- **Full-Name Priority**: The UI is configured to prioritize the verified company name (e.g., 'Tata Consultancy Services Limited') as the primary H1/H2 element, with ticker symbols demoted to sub-labels.
+- **Dynamic Title Sync**: The browser tab title dynamically updates with the company name once the neural signal is loaded, improving the multi-tab research experience.
+- **30s Pulse**: Both the Market and Detail pages implement background polling to ensure prices, neural signals, and news stay fresh without manual reloads.
+- **Hydration Resilience**: Uses `mounted` state checks and `suppressHydrationWarning` to ensure zero-crash performance during SSR.
 
 ---
 
