@@ -19,15 +19,17 @@ For a deep-dive into the neural orchestration and system blueprints, visit our:
 
 ## 💎 Core Capabilities
 
-### 🏛️ Total Market Coverage
+### 🏛️ Institutional Terminal V2
+*   **100% Full-Name Integrity**: Every stock is verified against official exchange records, prioritizing high-fidelity company names over ticker symbols.
+*   **3-Column Grid Intelligence**: Refined UI layout designed for professional, high-density equity analysis with superior readability.
+*   **30s Real-Time Auto-Refresh**: Seamless background polling keeps price analytics, news mood, and neural signals updated without page reloads.
+*   **Dual-Exchange Monitoring**: Switch between NSE and BSE benchmarks with a single click, featuring smart price fallback across exchanges.
 *   **2,361+ Symbols**: Fully mapped and seeded equity list covering both NSE and BSE.
-*   **Dual-Exchange Monitoring**: Switch between NSE and BSE benchmarks with a single click.
-*   **Smart Discovery**: Automated symbol discovery engine that identifies new listings and updates.
 
 ### ⚡ Smart-Sync Data Pipeline
 *   **Delta Update Engine**: High-speed incremental fetching that only "patches" missing trading days (idempotent).
 *   **Fast Batch Ingestion**: Uses a high-speed 50-stock batch fetching method (5-year history backfill).
-*   **Real-Time Poller**: Multi-threaded chunk polling ensures the entire market is tracked every minute.
+*   **Robust Polling Engine**: Multi-threaded chunk polling with built-in error handling for delisted or suspended symbols.
 
 ### 🧠 AI-Driven Intelligence
 *   **Transformers Sentiment**: Real-time news analysis using **DistilBERT** to generate market mood scores (-1.0 to 1.0) for every headline.
