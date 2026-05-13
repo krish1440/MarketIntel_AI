@@ -9,6 +9,7 @@ This directory contains standalone execution scripts designed for database admin
 
 ### 1. Database Administration
 *   **`create_tables.py`**: A safe, idempotent script that synchronizes the current SQLAlchemy models with the PostgreSQL database. Run this when setting up the environment on a new machine.
+*   **`fix_stock_names.py`**: The **Institutional Name Recovery** engine. Performs an audit of the entire 2,300+ stock universe using Yahoo Finance metadata to replace generic tickers and suffixes with verified legal company names. Designed for periodic integrity checks.
 
 ### 2. The Kaggle Export Engine
 *   **`smart_export.py`**: Our proprietary "Additive Export" engine. 
