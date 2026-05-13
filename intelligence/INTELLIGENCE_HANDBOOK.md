@@ -11,7 +11,9 @@ The Intelligence Core relies on three primary components to turn raw market data
 
 1.  **Autonomous Polling (`auto_learner.py`)**: A background daemon that tracks database growth. It automatically detects when substantial new data points are ingested and triggers background retraining without manual intervention.
 2.  **Incremental Finetuning (`incremental_learner.py`)**: Designed for high performance and low computational overhead. Instead of retraining massive XGBoost and LSTM structures from scratch, this engine slices the newest data and performs "tree-level" updates.
-3.  **Neural Pipeline (`prediction_service.py`)**: The central routing service. It extracts technical indicators, queries sentiment scores from the database, and injects everything into a multimodal fusion model (LSTM + Transformers + XGBoost) to generate a unified `BUY`/`SELL`/`HOLD` signal and multi-day price forecast.
+3.  **Neural Pipeline (`prediction_service.py`)**: The central routing service. It extracts technical indicators, queries sentiment scores from the database, and injects everything into a multimodal fusion model (LSTM + Transformers + XGBoost) to generate a unified `BUY`/`SELL`/`HOLD` signal.
+    - **Metadata Injection**: The service now injects verified company names and fundamental metadata into the final signal payload, ensuring the user interface can render a high-fidelity "Company-First" view alongside the raw AI predictions.
+    - **Interval Polling**: Optimized to sync with the 30-second frontend pulse for real-time drift analysis.
 
 ---
 
