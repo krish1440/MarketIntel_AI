@@ -8,9 +8,14 @@ from db.schema import get_session, Stock
 
 def fix_names():
     session = get_session()
-    # Audit ALL stocks to ensure 100% accurate naming
-    stocks_to_fix = session.query(Stock).all()
+    # Only audit stocks that don't have their legal names resolved yet (where name is equal to ticker)
+    stocks_to_fix = session.query(Stock).filter(Stock.name == Stock.ticker).all()
     
+    if not stocks_to_fix:
+        print("No stocks need name correction (all resolved).")
+        session.close()
+        return
+        
     print(f"Found {len(stocks_to_fix)} stocks needing name correction.")
     
     fixed_count = 0
