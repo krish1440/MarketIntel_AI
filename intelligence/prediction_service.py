@@ -53,7 +53,7 @@ class PredictionService:
                 print(f"Warning: Fusion model initialization failed: {e}")
 
 
-    def get_signal(self, ticker, exchange="NSE"):
+    def get_signal(self, ticker, exchange="NSE", as_of=None):
         """
         Generates a comprehensive neural trading signal and price forecast.
 
@@ -64,6 +64,7 @@ class PredictionService:
         Args:
             ticker (str): The stock symbol to analyze.
             exchange (str): The stock exchange (e.g., 'NSE' or 'BSE').
+            as_of (date): Optional simulation date for backtesting.
 
         Returns:
             dict: An intelligence payload containing the trading signal, technical 
@@ -75,8 +76,12 @@ class PredictionService:
             if not stock: return {"error": "Ticker not found"}
 
             # 1. Fetch recent price data (need more for SMA 50)
+            query = session.query(HistoricalPrice).filter_by(stock_id=stock.id, exchange=exchange)
+            if as_of:
+                query = query.filter(HistoricalPrice.date <= as_of)
+                
             prices = pd.read_sql(
-                session.query(HistoricalPrice).filter_by(stock_id=stock.id, exchange=exchange).order_by(HistoricalPrice.date.desc()).limit(150).statement,
+                query.order_by(HistoricalPrice.date.desc()).limit(150).statement,
                 session.bind
             ).iloc[::-1]
             
@@ -103,10 +108,13 @@ class PredictionService:
             last_sequence, _ = to_torch(X_lstm[-1:], np.zeros(1))
             
             # 2. News Sentiment
-            last_week = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+            as_of_dt = datetime.datetime.combine(as_of, datetime.time.max) if as_of else datetime.datetime.utcnow()
+            last_week = as_of_dt - datetime.timedelta(days=7)
+            
             news = session.query(NewsArticle).filter(
                 NewsArticle.stock_id == stock.id,
-                NewsArticle.published_at >= last_week
+                NewsArticle.published_at >= last_week,
+                NewsArticle.published_at <= as_of_dt
             ).all()
             sent_scores = [n.sentiment_score for n in news if n.sentiment_score is not None]
             sentiment_avg = float(sum(sent_scores)/len(sent_scores)) if sent_scores else 0.0
