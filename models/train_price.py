@@ -23,7 +23,7 @@ from db.schema import get_session, Stock, HistoricalPrice
 from models.preprocess import calculate_technical_indicators, prepare_lstm_data, to_torch
 from models.price_lstm import PriceLSTM
 
-def train_model(incremental=False):
+def train_model(incremental=False, cutoff_date=None):
     session = get_session()
     stocks = session.query(Stock).all()
     
@@ -33,9 +33,16 @@ def train_model(incremental=False):
     price_ranges = []
 
     print(f"{'Incremental' if incremental else 'Full'} training started...")
+    if cutoff_date:
+        print(f"Applying OOS Cutoff: Data after {cutoff_date} will be EXCLUDED.")
+
     for stock in stocks:
+        query = session.query(HistoricalPrice).filter_by(stock_id=stock.id)
+        if cutoff_date:
+            query = query.filter(HistoricalPrice.date < cutoff_date)
+            
         prices = pd.read_sql(
-            session.query(HistoricalPrice).filter_by(stock_id=stock.id).order_by(HistoricalPrice.date.asc()).statement,
+            query.order_by(HistoricalPrice.date.asc()).statement,
             session.bind
         )
         
@@ -133,4 +140,10 @@ def train_model(incremental=False):
     return metadata
 
 if __name__ == "__main__":
-    train_model()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--incremental", action="store_true")
+    parser.add_argument("--cutoff", type=str, help="OOS Cutoff Date (YYYY-MM-DD)")
+    args = parser.parse_args()
+    
+    train_model(incremental=args.incremental, cutoff_date=args.cutoff)
