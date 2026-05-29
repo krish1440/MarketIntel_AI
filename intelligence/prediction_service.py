@@ -193,6 +193,16 @@ class PredictionService:
                 # Master Confluence (Technical 70% + Fundamental 15% + Sentiment 15%)
                 master_score = score + fundamental_score + sentiment_score
                 
+                # --- NEW: Dynamic Trend Confirmation to prevent "Falling Knife" buys ---
+                is_severe_downtrend = (latest['close'] < sma_20) and (latest['close'] < sma_50) and (sma_20 < sma_50)
+                prev_rsi = clean(prices.iloc[-2]['RSI_14']) if len(prices) > 1 else rsi
+                has_bullish_reversal = (macd > macd_signal) and (rsi > prev_rsi)
+                
+                if is_severe_downtrend and not has_bullish_reversal:
+                    # Suppress buy signals in a heavy downtrend unless a reversal is confirmed
+                    if master_score > 0:
+                        master_score = 0
+                
                 # Determine 5-tier signal
                 if master_score >= 5: signal = "STRONG BUY"
                 elif master_score >= 2: signal = "BUY"
@@ -210,6 +220,15 @@ class PredictionService:
                 if cci > 150: score -= 1
                 if latest['close'] > sma_20: score += 1
                 else: score -= 1
+                
+                # Apply downtrend check to fallback
+                is_severe_downtrend = (latest['close'] < sma_20) and (latest['close'] < sma_50) and (sma_20 < sma_50)
+                prev_rsi = clean(prices.iloc[-2]['RSI_14']) if len(prices) > 1 else rsi
+                has_bullish_reversal = (macd > macd_signal) and (rsi > prev_rsi)
+                
+                if is_severe_downtrend and not has_bullish_reversal:
+                    if score > 0:
+                        score = 0
                 
                 if score >= 2: signal = "BUY"
                 elif score <= -2: signal = "SELL"
