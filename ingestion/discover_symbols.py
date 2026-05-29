@@ -109,6 +109,14 @@ def update_database():
     print(f"Database updated with {count_n} new stocks from NIFTY 500.")
     session.close()
 
+    if count_n > 0:
+        print("[AUTO-FIX] New stocks added. Running name resolution process...")
+        try:
+            from scripts.fix_stock_names import fix_names
+            fix_names()
+        except Exception as e:
+            print(f"[AUTO-FIX] Error resolving names: {e}")
+
 if __name__ == "__main__":
     update_database()
 
