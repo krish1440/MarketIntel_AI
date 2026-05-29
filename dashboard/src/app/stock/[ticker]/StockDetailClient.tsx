@@ -13,7 +13,6 @@ export default function StockDetailClient() {
   const [modelStatus, setModelStatus] = useState<any>(null);
   const [news, setNews] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
-  const [backtest, setBacktest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [capital, setCapital] = useState<number>(100000);
   const [riskPerTrade, setRiskPerTrade] = useState<number>(1); // 1%
@@ -24,18 +23,16 @@ export default function StockDetailClient() {
     // Trigger an instant news refresh in the background
     fetch(`http://localhost:8000/api/news/refresh/${ticker}`, { method: 'POST' });
 
-    const [predData, newsData, histData, statusData, backtestData] = await Promise.all([
+    const [predData, newsData, histData, statusData] = await Promise.all([
       fetch(`http://localhost:8000/api/predict/${ticker}?exchange=${ex}`).then(res => res.json()),
       fetch(`http://localhost:8000/api/news/${ticker}`).then(res => res.json()),
       fetch(`http://localhost:8000/api/history/${ticker}?exchange=${ex}`).then(res => res.json()),
-      fetch(`http://localhost:8000/api/model-status`).then(res => res.json()),
-      fetch(`http://localhost:8000/api/backtest/${ticker}`).then(res => res.json())
+      fetch(`http://localhost:8000/api/model-status`).then(res => res.json())
     ]);
     setPrediction(predData);
     setNews(newsData);
     setHistory(histData);
     setModelStatus(statusData);
-    setBacktest(backtestData);
     setLoading(false);
     
     if (predData?.fundamentals?.name) {
@@ -249,76 +246,7 @@ export default function StockDetailClient() {
               </div>
             </div>
 
-            {/* Strategy Time-Machine (Historical Backtest Curve) */}
-            <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-10 backdrop-blur-3xl relative overflow-hidden group">
-              <div className="flex justify-between items-center mb-10">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-blue-500/20 rounded-2xl border border-blue-500/30">
-                     <BarChart3 className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black uppercase tracking-tighter text-blue-400">Strategy Time-Machine</h2>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">1-Year Institutional Backtest Performance</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                   <span className="text-xs text-slate-500 font-black uppercase block mb-1">Total Return</span>
-                   <span className={`text-4xl font-black tracking-tighter ${backtest?.total_return > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {backtest?.total_return !== undefined ? `${backtest.total_return > 0 ? '+' : ''}${backtest.total_return.toFixed(1)}%` : '0.0%'}
-                   </span>
-                </div>
-              </div>
 
-              {backtest?.history && (
-                <div className="h-48 w-full relative mb-10">
-                  <svg viewBox="0 0 800 200" className="w-full h-full overflow-visible">
-                     {/* Equity Curve */}
-                     {(() => {
-                       const equities = (backtest?.history || []).map((h: any) => h.equity);
-                       const min = Math.min(...equities);
-                       const max = Math.max(...equities);
-                       const range = (max - min) || 1;
-                       const points = equities.map((e: any, i: number) => {
-                         const x = (i / (equities.length - 1)) * 800;
-                         const y = 180 - ((e - min) / range) * 160;
-                         return `${x},${y}`;
-                       }).join(' ');
-                       return (
-                         <>
-                           <path d={`M ${points} L 800,200 L 0,200 Z`} fill="url(#equityGradient)" className="opacity-10" />
-                           <polyline fill="none" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} className="drop-shadow-[0_0_10px_rgba(96,165,250,0.4)]" />
-                           <defs>
-                             <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                             </linearGradient>
-                           </defs>
-                         </>
-                       );
-                     })()}
-                  </svg>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
-                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Initial Capital</span>
-                    <span className="text-sm lg:text-base font-black text-white whitespace-nowrap">₹1,00,000</span>
-                 </div>
-                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
-                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Final Equity</span>
-                    <span className="text-sm lg:text-base font-black text-emerald-400 whitespace-nowrap">₹{backtest?.final_equity ? backtest.final_equity.toLocaleString() : '1,00,000'}</span>
-                 </div>
-                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
-                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Alpha Accuracy</span>
-                    <span className="text-sm lg:text-base font-black text-blue-400 whitespace-nowrap">{backtest?.accuracy !== undefined ? `${backtest.accuracy}%` : '---'}</span>
-                 </div>
-                 <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-center">
-                    <span className="text-[8px] text-slate-500 font-black uppercase block mb-1">Validation</span>
-                    <span className="text-[8px] lg:text-[9px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">VERIFIED ✅</span>
-                 </div>
-              </div>
-            </div>
 
             {/* Neural Momentum Matrix - Re-aligned and Integrated */}
             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2.5rem] p-8 backdrop-blur-xl relative overflow-hidden group">
