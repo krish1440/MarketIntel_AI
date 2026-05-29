@@ -453,52 +453,6 @@ def get_opportunity_radar():
     session.close()
     return clean_nas(radar_data)
 
-from fastapi import Request
-@app.get("/api/backtest/{ticker}")
-def backtest_stock(ticker: str, request: Request):
-    """
-    Runs a 1-year historical backtest for a specific ticker.
-    Returns signal history and equity curve.
-    """
-    from scratch.historical_audit_report import run_leak_free_audit
-    
-    # Use our existing audit logic but focused on 1-year
-    end_date = datetime.datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-    
-    # Get exchange from query params if available, default to NSE
-    exchange = request.query_params.get("exchange", "NSE")
-    audit_df = run_leak_free_audit(ticker, start_date, end_date, exchange=exchange)
-    
-    if audit_df is None or audit_df.empty:
-        return {"error": "Insufficient history for backtest"}
-        
-    # Generate Equity Curve starting at 100,000
-    equity = 100000
-    history = []
-    for _, row in audit_df.iterrows():
-        # Simple logic: If Win, gain 5%, if Loss, lose 2% (approximate based on our audit stats)
-        if row['Win'] == "Win":
-            equity *= 1.05
-        else:
-            equity *= 0.98
-            
-        history.append({
-            "date": row['Date'],
-            "signal": row['Signal'],
-            "price": row['Price'],
-            "equity": round(equity, 0)
-        })
-        
-    acc = (audit_df['Win'] == "Win").sum() / len(audit_df) * 100
-    
-    return clean_nas({
-        "ticker": ticker,
-        "final_equity": round(equity, 0),
-        "total_return": round(((equity - 100000) / 100000) * 100, 2),
-        "accuracy": round(acc, 1),
-        "history": history
-    })
 
 @app.get("/api/global-sentiment")
 def get_global_sentiment(limit: int = 50):
