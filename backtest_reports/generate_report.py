@@ -59,6 +59,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
             atr_multiplier = 1.3
             
         action = "NONE"
+        exited_today = False
         
         # 1. Exit Logic for Active Positions
         if position_type == "LONG" and shares > 0:
@@ -74,6 +75,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Take-Profit Exit
             elif current_price >= take_profit:
                 capital += shares * current_price
@@ -81,6 +83,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Time-based exit (12 days flat/loss)
             elif days_held >= 12 and current_price < entry_price:
                 capital += shares * current_price
@@ -88,6 +91,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Model Opposing Signal Exit
             elif (signal == "STRONG_SELL" or signal == "STRONG SELL" or signal == "SELL") and shares > 0:
                 capital += shares * current_price
@@ -95,11 +99,13 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
                 
         elif position_type == "SHORT" and shares > 0:
             days_held += 1
             lowest_price = min(lowest_price, current_price)
-            trailing_stop = lowest_price + (atr_multiplier * entry_atr)
+            # Tighten trailing stop for short positions to protect against short squeezes
+            trailing_stop = lowest_price + (1.2 * entry_atr)
             take_profit = entry_price - (2.5 * entry_atr)
             
             # Stop-Loss Exit (Price rose above trailing stop)
@@ -109,6 +115,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Take-Profit Exit (Price dropped to target)
             elif current_price <= take_profit:
                 capital += shares * (entry_price - current_price)
@@ -116,6 +123,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Time-based exit (12 days flat/loss)
             elif days_held >= 12 and current_price > entry_price:
                 capital += shares * (entry_price - current_price)
@@ -123,6 +131,7 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
             # Model Opposing Signal Exit
             elif (signal == "STRONG_BUY" or signal == "STRONG BUY" or signal == "BUY") and shares > 0:
                 capital += shares * (entry_price - current_price)
@@ -130,9 +139,10 @@ def run_backtest_inline(ticker, start_date, end_date, service, session, exchange
                 shares = 0
                 position_type = None
                 days_held = 0
+                exited_today = True
                 
-        # 2. Entry Logic (Only if in Cash)
-        if position_type is None or shares == 0:
+        # 2. Entry Logic (Only if in Cash and didn't exit today)
+        if (position_type is None or shares == 0) and not exited_today:
             # LONG Entries
             if (signal == "STRONG_BUY" or signal == "STRONG BUY") and capital >= current_price:
                 shares_to_buy = int(capital // current_price)
