@@ -73,6 +73,7 @@ class TradingEnv:
         self.days_held = 0
         self.portfolio_value_history = [self.initial_capital]
         self.trades_history = []
+        self.completed_trades_pnl = []
         return self._get_state()
         
     def _get_state(self):
@@ -106,6 +107,7 @@ class TradingEnv:
     def step(self, action):
         row = self.df.iloc[self.current_step]
         current_price = float(row['close'])
+        date_str = str(row['date']).split(' ')[0] if 'date' in row else str(self.current_step)
         atr = float(row.get('ATR_14', current_price * 0.02))
         
         action_detail = "HOLD"
@@ -119,23 +121,30 @@ class TradingEnv:
             trailing_stop = self.highest_price - (atr_multiplier * self.entry_atr)
             take_profit = self.entry_price + (2.5 * self.entry_atr)
             
+            pnl = (current_price - self.entry_price) * self.shares
             if current_price < trailing_stop:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * current_price
                 action_detail = "STOP_EXIT_SL"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
                 exited = True
             elif current_price >= take_profit:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * current_price
                 action_detail = "STOP_EXIT_TP"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
                 exited = True
             elif self.days_held >= 12 and current_price < self.entry_price:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * current_price
                 action_detail = "STOP_EXIT_TIME"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
@@ -147,23 +156,30 @@ class TradingEnv:
             trailing_stop = self.lowest_price + (1.2 * self.entry_atr)
             take_profit = self.entry_price - (2.5 * self.entry_atr)
             
+            pnl = (self.entry_price - current_price) * self.shares
             if current_price > trailing_stop:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * (self.entry_price - current_price)
                 action_detail = "STOP_EXIT_SL_SHORT"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
                 exited = True
             elif current_price <= take_profit:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * (self.entry_price - current_price)
                 action_detail = "STOP_EXIT_TP_SHORT"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
                 exited = True
             elif self.days_held >= 12 and current_price > self.entry_price:
+                self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * (self.entry_price - current_price)
                 action_detail = "STOP_EXIT_TIME_SHORT"
+                self.trades_history.append((date_str, action_detail, current_price, pnl))
                 self.shares = 0
                 self.position_type = None
                 self.days_held = 0
@@ -181,7 +197,7 @@ class TradingEnv:
                     self.entry_atr = atr
                     self.days_held = 0
                     action_detail = "BUY"
-                    self.trades_history.append((self.current_step, "BUY", current_price))
+                    self.trades_history.append((date_str, "BUY", current_price, 0.0))
                     
             elif action == 2 and self.capital >= current_price:
                 shares_to_short = int(self.capital // current_price)
@@ -193,7 +209,7 @@ class TradingEnv:
                     self.entry_atr = atr
                     self.days_held = 0
                     action_detail = "SHORT"
-                    self.trades_history.append((self.current_step, "SHORT", current_price))
+                    self.trades_history.append((date_str, "SHORT", current_price, 0.0))
 
         if self.position_type == "LONG":
             portfolio_value = self.capital + (self.shares * current_price)
@@ -334,6 +350,7 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
             
     # Save the trained model model weights to backtest_reports/models/
     os.makedirs('backtest_reports/models', exist_ok=True)
+    os.makedirs('backtest_reports/logs', exist_ok=True)
     torch.save(agent.policy_net.state_dict(), f'backtest_reports/models/{ticker}_dqn.pth')
             
     # Evaluate DQN agent on test set (OOS)
@@ -361,15 +378,37 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
     end_close = float(test_df.iloc[-1]['close'])
     bh_return = ((end_close / start_close) - 1) * 100
     
+    # Calculate Profit Factor
+    completed_pnl = test_env.completed_trades_pnl
+    gross_profit = sum([p for p in completed_pnl if p > 0])
+    gross_loss = abs(sum([p for p in completed_pnl if p < 0]))
+    profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (99.0 if gross_profit > 0 else 0.0)
+    
+    win_rate = (len([p for p in completed_pnl if p > 0]) / len(completed_pnl) * 100) if len(completed_pnl) > 0 else 0.0
+    
+    # Save detailed trade log
+    trade_log = [f"# Detailed Trade Log: {ticker}"]
+    trade_log.append(f"**Profit Factor**: {profit_factor:.2f} | **Win Rate**: {win_rate:.1f}%")
+    trade_log.append("\n| Date | Action | Price | Trade PnL |")
+    trade_log.append("| :--- | :--- | :--- | :--- |")
+    for t in test_env.trades_history:
+        pnl_str = f"+ Rs. {t[3]:.2f}" if t[3] > 0 else (f"- Rs. {abs(t[3]):.2f}" if t[3] < 0 else "-")
+        trade_log.append(f"| {t[0]} | {t[1]} | Rs. {t[2]:.2f} | {pnl_str} |")
+        
+    with open(f"backtest_reports/logs/trades_{ticker}.md", "w") as f:
+        f.write("\n".join(trade_log))
+    
     return {
         "ticker": ticker,
         "train_rows": len(train_df),
         "test_rows": len(test_df),
         "rl_return": rl_return,
         "bh_return": bh_return,
-        "trades": len(test_env.trades_history),
         "sharpe": sharpe,
-        "final_value": final_rl_val
+        "final_val": final_rl_val,
+        "trades": len(test_env.trades_history),
+        "profit_factor": profit_factor,
+        "win_rate": win_rate
     }
 
 if __name__ == "__main__":
@@ -379,9 +418,15 @@ if __name__ == "__main__":
     train_end = datetime.date(2025, 5, 28)
     train_start = datetime.date(2021, 5, 29)
     
-    # Chunk of 10 key stocks selected from user's Nifty 50 list
-    tickers = ["TCS", "RELIANCE", "INFY", "HDFCBANK", "ICICIBANK", "ADANIENT", "SBIN", "LT", "ITC", "BHARTIRTIL"]
-    
+    # Chunk of 50 key stocks (Nifty 50)
+    tickers = [
+        "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", 
+        "BEL", "BHARTIARTL", "CIPLA", "COALINDIA", "DRREDDY", "EICHERMOT", "GRASIM", "HCLTECH", 
+        "HDFCBANK", "HDFCLIFE", "HINDALCO", "HINDUNILVR", "ICICIBANK", "INFY", "INDIGO", "ITC", "JIOFIN", 
+        "JSWSTEEL", "KOTAKBANK", "LT", "M&M", "MARUTI", "MAXHEALTH", "NESTLEIND", "NTPC", "ONGC", 
+        "POWERGRID", "RELIANCE", "SBILIFE", "SHRIRAMFIN", "SBIN", "SUNPHARMA", "TCS", "TATACONSUM", 
+        "TATAMOTORS", "TATASTEEL", "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO"
+    ]
     print("="*60)
     print("RUNNING MULTI-STOCK DQN RL BACKTEST COMPARISON")
     print(f"Train period: {train_start} to {train_end}")
@@ -411,14 +456,24 @@ if __name__ == "__main__":
     report_content.append(f"**Training Period**: {train_start} to {train_end} (4 Years)")
     report_content.append(f"**Test Period (OOS)**: {test_start} to {test_end} (1 Year)")
     report_content.append("\n## Summary Table")
-    report_content.append("| Ticker | RL Return % | B&H Return % | Outperformance % | Trades | Sharpe | Final Portfolio (RL) |")
-    report_content.append("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |")
+    report_content.append("| Ticker | RL Return % | B&H Return % | Outperformance % | Trades | Win Rate % | Profit Factor | Final Portfolio (RL) |")
+    report_content.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
+    
+    total_final_val = 0.0
+    initial_total_val = len(results) * 100000.0
     
     for r in results:
         outperf = r['rl_return'] - r['bh_return']
+        total_final_val += r['final_val']
         report_content.append(
-            f"| {r['ticker']} | {r['rl_return']:.2f}% | {r['bh_return']:.2f}% | {outperf:+.2f}% | {r['trades']} | {r['sharpe']:.2f} | Rs. {r['final_value']:,.2f} |"
+            f"| {r['ticker']} | {r['rl_return']:.2f}% | {r['bh_return']:.2f}% | {outperf:+.2f}% | {r['trades']} | {r['win_rate']:.1f}% | {r['profit_factor']:.2f} | Rs. {r['final_val']:,.2f} |"
         )
+        
+    total_return_pct = ((total_final_val / initial_total_val) - 1) * 100 if initial_total_val > 0 else 0
+    report_content.append("\n### Portfolio Aggregate Performance")
+    report_content.append(f"* **Total Capital Deployed**: Rs. {initial_total_val:,.2f}")
+    report_content.append(f"* **Total Final Value**: Rs. {total_final_val:,.2f}")
+    report_content.append(f"* **Total Profit / Loss**: Rs. {(total_final_val - initial_total_val):,.2f} ({total_return_pct:+.2f}%)")
         
     report_text = "\n".join(report_content)
     
