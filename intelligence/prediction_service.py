@@ -140,13 +140,43 @@ class PredictionService:
             tenkan = clean(latest.get('Ichimoku_Tenkan', 0.0))
             kijun = clean(latest.get('Ichimoku_Kijun', 0.0))
 
-            # 4. Signal Generation (Lazy-Training DQN RL Agent)
-            from intelligence.rl_inference_service import get_rl_signal
-            rl_data = get_rl_signal(ticker)
+            # 4. Signal Generation (Deterministic Technical Scoring)
+            current_price = float(latest['close'])
+            score = 0.0
             
-            signal = rl_data.get("signal", "HOLD")
-            confidence = rl_data.get("confidence", 0.0)
-            status_text = rl_data.get("status", "Ready")
+            # Trend (Moving Averages)
+            if current_price > sma_20: score += 1.0
+            elif current_price < sma_20: score -= 1.0
+            
+            if current_price > sma_50: score += 1.0
+            elif current_price < sma_50: score -= 1.0
+            
+            # MACD
+            if macd > macd_signal: score += 1.0
+            elif macd < macd_signal: score -= 1.0
+            
+            # RSI Momentum
+            if rsi < 30: score += 1.5
+            elif rsi < 45: score += 0.5
+            elif rsi > 70: score -= 1.5
+            elif rsi > 55: score -= 0.5
+            
+            # Normalize score (-4.5 to +4.5 max range)
+            max_possible_score = 4.5
+            normalized_score = score / max_possible_score
+            
+            # Add slight sentiment weight (max +/- 0.1)
+            normalized_score += (sentiment_avg * 0.1)
+            normalized_score = max(min(normalized_score, 1.0), -1.0)
+            
+            # Map to UI Signal
+            if normalized_score > 0.5: signal = "STRONG BUY"
+            elif normalized_score > 0.15: signal = "BUY"
+            elif normalized_score < -0.5: signal = "STRONG SELL"
+            elif normalized_score < -0.15: signal = "SELL"
+            else: signal = "HOLD"
+            
+            confidence = abs(normalized_score)
 
             
             # 5. Advanced Price Forecast

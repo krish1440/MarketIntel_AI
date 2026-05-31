@@ -58,7 +58,7 @@ class TradingEnv:
     def __init__(self, df, initial_capital=100000.0):
         self.df = df.reset_index(drop=True)
         self.initial_capital = initial_capital
-        self.action_space = 4  # 0: HOLD, 1: BUY, 2: SHORT, 3: EXIT
+        self.action_space = 3  # 0: HOLD, 1: BUY, 2: SHORT — EXIT handled by trailing stop
         self.reset()
         
     def reset(self):
@@ -194,17 +194,6 @@ class TradingEnv:
                     self.days_held = 0
                     action_detail = "SHORT"
                     self.trades_history.append((self.current_step, "SHORT", current_price))
-                    
-        elif action == 3 and self.shares > 0 and (not exited):
-            if self.position_type == "LONG":
-                self.capital += self.shares * current_price
-            elif self.position_type == "SHORT":
-                self.capital += self.shares * (self.entry_price - current_price)
-            action_detail = "COVER/SELL"
-            self.trades_history.append((self.current_step, "EXIT", current_price))
-            self.shares = 0
-            self.position_type = None
-            self.days_held = 0
 
         if self.position_type == "LONG":
             portfolio_value = self.capital + (self.shares * current_price)
@@ -220,7 +209,8 @@ class TradingEnv:
         drawdown = (portfolio_value - self.initial_capital) / self.initial_capital
         drawdown_penalty = -0.005 if drawdown < -0.1 else 0.0
         
-        reward = daily_return + cash_penalty + drawdown_penalty
+        # Scale reward by 10x so Q-values diverge more decisively during training
+        reward = (daily_return + cash_penalty + drawdown_penalty) * 10.0
         
         self.portfolio_value_history.append(portfolio_value)
         self.current_step += 1
@@ -323,7 +313,7 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
         
     # Train DQN agent
     env = TradingEnv(train_df)
-    agent = DQNAgent(state_dim=11, action_space=4)
+    agent = DQNAgent(state_dim=11, action_space=3)  # 3 actions: HOLD, BUY, SHORT
     
     step_count = 0
     for epoch in range(epochs):

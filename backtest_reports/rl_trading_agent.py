@@ -60,7 +60,7 @@ class TradingEnv:
     def __init__(self, df, initial_capital=100000.0):
         self.df = df.reset_index(drop=True)
         self.initial_capital = initial_capital
-        self.action_space = 4  # 0: HOLD, 1: LONG, 2: SHORT, 3: EXIT
+        self.action_space = 3  # 0: HOLD, 1: BUY (LONG), 2: SHORT — EXIT handled by trailing stop
         self.reset()
         
     def reset(self):
@@ -186,6 +186,7 @@ class TradingEnv:
                 exited = True
 
         # 2. Process Agent-Driven Decisions (only if in cash and didn't exit today)
+        # Action space: 0=HOLD, 1=BUY/LONG, 2=SHORT — no explicit EXIT (handled by trailing stops)
         if (self.position_type is None) and (not exited):
             if action == 1 and self.capital >= current_price:  # BUY / LONG
                 shares_to_buy = int(self.capital // current_price)
@@ -211,17 +212,6 @@ class TradingEnv:
                     self.days_held = 0
                     action_detail = "SHORT"
                     self.trades_history.append((self.current_step, "SHORT", current_price))
-                    
-        elif action == 3 and self.shares > 0 and (not exited):  # EXIT
-            if self.position_type == "LONG":
-                self.capital += self.shares * current_price
-            elif self.position_type == "SHORT":
-                self.capital += self.shares * (self.entry_price - current_price)
-            action_detail = "COVER/SELL"
-            self.trades_history.append((self.current_step, "EXIT", current_price))
-            self.shares = 0
-            self.position_type = None
-            self.days_held = 0
 
         # Calculate portfolio value
         if self.position_type == "LONG":
@@ -241,7 +231,9 @@ class TradingEnv:
         drawdown = (portfolio_value - self.initial_capital) / self.initial_capital
         drawdown_penalty = -0.005 if drawdown < -0.1 else 0.0
         
-        reward = daily_return + cash_penalty + drawdown_penalty
+        # Scale reward by 10x so Q-values diverge more decisively during training
+        # This is the key fix for the 25% flat-confidence problem
+        reward = (daily_return + cash_penalty + drawdown_penalty) * 10.0
         
         # Advance step
         self.portfolio_value_history.append(portfolio_value)
@@ -351,11 +343,11 @@ def run_rl_experiment(ticker="TCS"):
     # Initialize environment and agent
     env = TradingEnv(train_df)
     state_dim = 11
-    action_space = 4
+    action_space = 3  # HOLD, BUY, SHORT — EXIT is handled by env trailing stops
     agent = DQNAgent(state_dim, action_space)
     
     # Training Loop
-    epochs = 40
+    epochs = 60  # Increased from 40 to give Q-values more time to diverge
     print("\nStarting RL Agent training loop...")
     for epoch in range(epochs):
         state = env.reset()

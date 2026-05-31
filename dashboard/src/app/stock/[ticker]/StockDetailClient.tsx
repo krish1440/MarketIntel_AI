@@ -302,7 +302,7 @@ export default function StockDetailClient() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                   <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">P/E Ratio</span>
-                  <span className="text-xl font-mono font-black text-white">{prediction?.fundamentals?.pe_ratio || 'N/A'}</span>
+                  <span className="text-xl font-mono font-black text-white">{prediction?.fundamentals?.pe_ratio ? prediction.fundamentals.pe_ratio.toFixed(2) : 'N/A'}</span>
                 </div>
                 <div className="bg-black/20 p-4 rounded-2xl border border-white/5">
                   <span className="text-[8px] text-slate-500 font-bold uppercase block mb-1">Sector</span>

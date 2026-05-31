@@ -51,11 +51,11 @@ def train_dqn_in_background(ticker: str):
         prices_df = calculate_technical_indicators(prices_df)
         prices_df = prices_df.dropna(subset=['close', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']).reset_index(drop=True)
         
-        # Train on the entire available dataset
+        # Train on the entire available dataset with 3-action space (HOLD, BUY, SHORT)
         env = TradingEnv(prices_df)
-        agent = DQNAgent(state_dim=11, action_space=4)
+        agent = DQNAgent(state_dim=11, action_space=3)
         
-        epochs = 30
+        epochs = 60  # Increased from 30: more epochs = more Q-value divergence = better confidence
         step_count = 0
         for epoch in range(epochs):
             state = env.reset()
@@ -175,28 +175,34 @@ def get_rl_signal(ticker: str) -> dict:
             1.0 if latest_row.get('close') > latest_row.get('Typical_Price', latest_row.get('close')) else 0.0
         ], dtype=np.float32)
         
-        # Run inference using pre-trained network
+        # Run inference using pre-trained network (3-action: HOLD, BUY, SHORT)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model = QNetwork(state_dim=11, action_dim=4).to(device)
+        model = QNetwork(state_dim=11, action_dim=3).to(device)
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.eval()
         
         state_t = torch.FloatTensor(state).to(device)
         with torch.no_grad():
-            q_values = model(state_t).squeeze(0)  # shape: [4]
-            # Multiply Q-values by 100.0 to scale the softmax distribution and give realistic confidence
-            probs = torch.softmax(q_values * 100.0, dim=0).cpu().numpy()
+            q_values = model(state_t).squeeze(0)  # shape: [3]
             action = int(torch.argmax(q_values).item())
             
-        # Map Action code to recommendation
+        # Margin-based confidence: how much better is the best action vs the second-best?
+        # This fixes the 25% flat-confidence problem from softmax over 3/4 equal Q-values
+        q_np = q_values.cpu().numpy()
+        sorted_q = np.sort(q_np)[::-1]   # sort descending
+        best_q = sorted_q[0]
+        second_q = sorted_q[1]
+        margin = float(best_q - second_q)
+        # Normalize: margin of 0.0 = 0% confidence, margin of 0.5+ = 100% confidence
+        confidence = float(min(abs(margin) * 2.0, 1.0))
+        
+        # Map Action code to recommendation (3-action space)
         signal_map = {
             0: "HOLD",
             1: "BUY",
-            2: "SELL",
-            3: "EXIT"
+            2: "SELL"  # SHORT in training, shown as SELL to user
         }
         signal = signal_map.get(action, "HOLD")
-        confidence = float(probs[action])
         
         return {
             "signal": signal,
