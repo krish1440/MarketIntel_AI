@@ -15,6 +15,7 @@ import numpy as np
 # Global flag for AI capability
 TORCH_AVAILABLE = False
 try:
+    # pyrefly: ignore [missing-import]
     import torch
     TORCH_AVAILABLE = True
 except Exception as e:
@@ -139,101 +140,43 @@ class PredictionService:
             tenkan = clean(latest.get('Ichimoku_Tenkan', 0.0))
             kijun = clean(latest.get('Ichimoku_Kijun', 0.0))
 
-            # 4. Signal Generation (Fusion vs Advanced Heuristic)
-            if self.fusion and TORCH_AVAILABLE:
-                # Prepare technicals for fusion
-                tech_summary = {"rsi": rsi, "adx": adx, "cci": cci}
-                features = self.fusion.extract_features(last_sequence, sent_scores, technicals=tech_summary)
-                pred, model_confidence = self.fusion.predict(features, rsi=rsi)
-                
-                # Refine signal based on advanced indicators (Confluence logic)
-                score = 0
-                if pred == 1: score += 2
-                else: score -= 2
-                
-                # Weighting factors
-                if rsi < 30: score += 2
-                if rsi > 70: score -= 2
-                
-                # Trend & Momentum
-                if adx > 25: 
-                    if latest['close'] > sma_20: score += 1
-                    elif latest['close'] < sma_20: score -= 1
-                
-                # CCI Momentum
-                if cci > 150: score += 1
-                if cci < -150: score -= 1
-                
-                # Ichimoku Confluence
-                if latest['close'] > tenkan and tenkan > kijun: score += 2 # Strong Bullish
-                if latest['close'] < tenkan and tenkan < kijun: score -= 2 # Strong Bearish
-                
-                # Bearish Refinement (Only trigger SELL if price is below VWAP or MACD is negative)
-                if score < 0:
-                    if latest['close'] < vwap: score -= 1
-                    if macd < macd_signal: score -= 1
-                    # Avoid "SELL" if RSI is already very low (oversold bounce risk)
-                    if rsi < 35: score += 2 
-                
-                # --- NEW: Multi-Factor Integration ---
-                # 2. Fundamental Factor (Value Check)
-                fundamental_score = 0
-                pe = float(stock.pe_ratio) if stock.pe_ratio else 22.0
-                if pe < 18: fundamental_score += 1
-                if pe > 40: fundamental_score -= 1
-                
-                # 3. News Sentiment Factor
-                sentiment_score = 0
-                latest_news = session.query(NewsArticle).filter_by(stock_id=stock.id).order_by(NewsArticle.published_at.desc()).limit(3).all()
-                if latest_news:
-                    avg_sent = sum(float(n.sentiment_score or 0) for n in latest_news) / len(latest_news)
-                    if avg_sent > 0.3: sentiment_score += 1
-                    elif avg_sent < -0.3: sentiment_score -= 1
-                
-                # Master Confluence (Technical 70% + Fundamental 15% + Sentiment 15%)
-                master_score = score + fundamental_score + sentiment_score
-                
-                # --- NEW: Dynamic Trend Confirmation to prevent "Falling Knife" buys ---
-                is_severe_downtrend = (latest['close'] < sma_20) and (latest['close'] < sma_50) and (sma_20 < sma_50)
-                prev_rsi = clean(prices.iloc[-2]['RSI_14']) if len(prices) > 1 else rsi
-                has_bullish_reversal = (macd > macd_signal) and (rsi > prev_rsi)
-                
-                if is_severe_downtrend and not has_bullish_reversal:
-                    # Suppress buy signals in a heavy downtrend unless a reversal is confirmed
-                    if master_score > 0:
-                        master_score = 0
-                
-                # Determine 5-tier signal
-                if master_score >= 5: signal = "STRONG BUY"
-                elif master_score >= 2: signal = "BUY"
-                elif master_score <= -5: signal = "STRONG SELL"
-                elif master_score <= -3: signal = "SELL"
-                else: signal = "HOLD"
-                
-                confidence = (model_confidence + (abs(master_score) / 10.0)) / 2.0
-            else:
-                # Advanced Heuristic Fallback (Rule-based confluence)
-                score = 0
-                if rsi < 35: score += 2
-                if rsi > 65: score -= 2
-                if cci < -150: score += 1
-                if cci > 150: score -= 1
-                if latest['close'] > sma_20: score += 1
-                else: score -= 1
-                
-                # Apply downtrend check to fallback
-                is_severe_downtrend = (latest['close'] < sma_20) and (latest['close'] < sma_50) and (sma_20 < sma_50)
-                prev_rsi = clean(prices.iloc[-2]['RSI_14']) if len(prices) > 1 else rsi
-                has_bullish_reversal = (macd > macd_signal) and (rsi > prev_rsi)
-                
-                if is_severe_downtrend and not has_bullish_reversal:
-                    if score > 0:
-                        score = 0
-                
-                if score >= 2: signal = "BUY"
-                elif score <= -2: signal = "SELL"
-                else: signal = "HOLD"
-                confidence = 0.65
+            # 4. Signal Generation (Deterministic Technical Scoring)
+            current_price = float(latest['close'])
+            score = 0.0
+            
+            # Trend (Moving Averages)
+            if current_price > sma_20: score += 1.0
+            elif current_price < sma_20: score -= 1.0
+            
+            if current_price > sma_50: score += 1.0
+            elif current_price < sma_50: score -= 1.0
+            
+            # MACD
+            if macd > macd_signal: score += 1.0
+            elif macd < macd_signal: score -= 1.0
+            
+            # RSI Momentum
+            if rsi < 30: score += 1.5
+            elif rsi < 45: score += 0.5
+            elif rsi > 70: score -= 1.5
+            elif rsi > 55: score -= 0.5
+            
+            # Normalize score (-4.5 to +4.5 max range)
+            max_possible_score = 4.5
+            normalized_score = score / max_possible_score
+            
+            # Add slight sentiment weight (max +/- 0.1)
+            normalized_score += (sentiment_avg * 0.1)
+            normalized_score = max(min(normalized_score, 1.0), -1.0)
+            
+            # Map to UI Signal
+            if normalized_score > 0.5: signal = "STRONG BUY"
+            elif normalized_score > 0.15: signal = "BUY"
+            elif normalized_score < -0.5: signal = "STRONG SELL"
+            elif normalized_score < -0.15: signal = "SELL"
+            else: signal = "HOLD"
+            
+            confidence = abs(normalized_score)
 
             
             # 5. Advanced Price Forecast
@@ -265,7 +208,7 @@ class PredictionService:
                 },
                 "fundamentals": {
                     "name": stock.name or ticker,
-                    "pe_ratio": float(stock.pe_ratio) if stock.pe_ratio else 0.0,
+                    "pe_ratio": float(current_price / float(stock.eps)) if stock.eps and float(stock.eps) > 0 else (float(stock.pe_ratio) if stock.pe_ratio else 0.0),
                     "market_cap": int(stock.market_cap) if stock.market_cap else 0,
                     "sector": stock.sector or "Unknown"
                 },

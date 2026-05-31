@@ -16,7 +16,9 @@ Key Features:
 import sys
 import os
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import nsepython
+# pyrefly: ignore [import, missing-import]
 from bsedata.bse import BSE
 
 # Add parent directory to path for db imports
