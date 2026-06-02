@@ -24,7 +24,7 @@ class QNetwork(nn.Module):
         self.out = nn.Linear(32, action_dim)
         
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.2)
         
     def forward(self, x):
         if x.dim() == 1:
@@ -55,14 +55,15 @@ class ReplayBuffer:
 
 # Environment Simulator
 class TradingEnv:
-    def __init__(self, df, initial_capital=100000.0):
+    def __init__(self, df, initial_capital=100000.0, mode="LONG_TERM"):
         self.df = df.reset_index(drop=True)
         self.initial_capital = initial_capital
-        self.action_space = 3  # 0: HOLD, 1: BUY, 2: SHORT — EXIT handled by trailing stop
+        self.mode = mode  # "LONG_TERM" or "SHORT_TERM"
+        self.action_space = 3  # 0: HOLD, 1: BUY, 2: SHORT
         self.reset()
         
     def reset(self):
-        self.current_step = 60  # Warmup window
+        self.current_step = 100  # Warmup window extended to 100 for SMA_100
         self.capital = self.initial_capital
         self.shares = 0
         self.position_type = None  # "LONG", "SHORT", or None
@@ -97,12 +98,19 @@ class TradingEnv:
         sma20_rel = (close - float(row.get('SMA_20', close))) / close
         sma50_rel = (close - float(row.get('SMA_50', close))) / close
         
-        state = np.array([
+        state_list = [
             rsi, adx, macd, atr, in_long, in_short, 
             days_held_norm, current_return, sma20_rel, sma50_rel,
             1.0 if row.get('close') > row.get('Typical_Price', row.get('close')) else 0.0
-        ], dtype=np.float32)
-        return state
+        ]
+        
+        if self.mode == "LONG_TERM":
+            sma100_rel = (close - float(row.get('SMA_100', close))) / close
+            bb_width = float(row.get('BB_Width', 0.1))
+            state_list.append(sma100_rel)
+            state_list.append(bb_width)
+            
+        return np.array(state_list, dtype=np.float32)
 
     def step(self, action):
         row = self.df.iloc[self.current_step]
@@ -112,14 +120,23 @@ class TradingEnv:
         
         action_detail = "HOLD"
         adx = float(row.get('ADX_14', 20))
-        atr_multiplier = 2.2 if adx > 25 else 1.3
         
+        # Mode-specific parameters
+        if self.mode == "LONG_TERM":
+            atr_multiplier = 2.5 if adx > 25 else 2.0
+            tp_multiplier = 4.0
+            max_days = 30
+        else: # SHORT_TERM
+            atr_multiplier = 0.8
+            tp_multiplier = 1.2
+            max_days = 5
+            
         exited = False
         if self.position_type == "LONG" and self.shares > 0:
             self.days_held += 1
             self.highest_price = max(self.highest_price, current_price)
             trailing_stop = self.highest_price - (atr_multiplier * self.entry_atr)
-            take_profit = self.entry_price + (2.5 * self.entry_atr)
+            take_profit = self.entry_price + (tp_multiplier * self.entry_atr)
             
             pnl = (current_price - self.entry_price) * self.shares
             if current_price < trailing_stop:
@@ -140,7 +157,8 @@ class TradingEnv:
                 self.position_type = None
                 self.days_held = 0
                 exited = True
-            elif self.days_held >= 12 and current_price < self.entry_price:
+            elif (self.mode == "LONG_TERM" and self.days_held >= max_days and current_price < self.entry_price) or \
+                 (self.mode == "SHORT_TERM" and self.days_held >= max_days):
                 self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * current_price
                 action_detail = "STOP_EXIT_TIME"
@@ -153,8 +171,8 @@ class TradingEnv:
         elif self.position_type == "SHORT" and self.shares > 0:
             self.days_held += 1
             self.lowest_price = min(self.lowest_price, current_price)
-            trailing_stop = self.lowest_price + (1.2 * self.entry_atr)
-            take_profit = self.entry_price - (2.5 * self.entry_atr)
+            trailing_stop = self.lowest_price + (atr_multiplier * self.entry_atr)
+            take_profit = self.entry_price - (tp_multiplier * self.entry_atr)
             
             pnl = (self.entry_price - current_price) * self.shares
             if current_price > trailing_stop:
@@ -175,7 +193,8 @@ class TradingEnv:
                 self.position_type = None
                 self.days_held = 0
                 exited = True
-            elif self.days_held >= 12 and current_price > self.entry_price:
+            elif (self.mode == "LONG_TERM" and self.days_held >= max_days and current_price > self.entry_price) or \
+                 (self.mode == "SHORT_TERM" and self.days_held >= max_days):
                 self.completed_trades_pnl.append(pnl)
                 self.capital += self.shares * (self.entry_price - current_price)
                 action_detail = "STOP_EXIT_TIME_SHORT"
@@ -221,7 +240,7 @@ class TradingEnv:
         prev_value = self.portfolio_value_history[-1]
         daily_return = (portfolio_value - prev_value) / prev_value
         
-        cash_penalty = -0.0001 if self.position_type is None else 0.0
+        cash_penalty = 0.0
         drawdown = (portfolio_value - self.initial_capital) / self.initial_capital
         drawdown_penalty = -0.005 if drawdown < -0.1 else 0.0
         
@@ -251,7 +270,8 @@ class DQNAgent:
         self.target_net = QNetwork(state_dim, action_space).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=0.001)
+        # Add weight_decay to prevent overfitting since we have limited data
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=0.001, weight_decay=1e-4)
         self.memory = ReplayBuffer()
         
     def act(self, state):
@@ -294,7 +314,7 @@ class DQNAgent:
             
         return loss.item()
 
-def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end, epochs=30):
+def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end, epochs=100):
     session = get_session()
     stock = session.query(Stock).filter_by(ticker=ticker).first()
     if not stock:
@@ -316,9 +336,9 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
     if len(prices_df) < 200:
         return None
         
-    # Calculate technical indicators on the whole dataframe first (non-lookahead, row-by-row functions only)
+    # Calculate technical indicators
     prices_df = calculate_technical_indicators(prices_df)
-    prices_df = prices_df.dropna(subset=['close', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']).reset_index(drop=True)
+    prices_df = prices_df.dropna(subset=['close', 'SMA_100', 'BB_Width', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']).reset_index(drop=True)
     
     # Split into train and test purely based on dates
     train_df = prices_df[(prices_df['date'] >= train_start) & (prices_df['date'] <= train_end)].reset_index(drop=True)
@@ -327,89 +347,84 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
     if len(train_df) < 100 or len(test_df) < 20:
         return None
         
-    # Train DQN agent
-    env = TradingEnv(train_df)
-    agent = DQNAgent(state_dim=11, action_space=3)  # 3 actions: HOLD, BUY, SHORT
-    
-    step_count = 0
-    for epoch in range(epochs):
-        state = env.reset()
-        done = False
-        while not done:
-            action = agent.act(state)
-            next_state, reward, done, info = env.step(action)
-            agent.memory.push(state, action, reward, next_state, done)
-            state = next_state
-            
-            step_count += 1
-            if step_count % 4 == 0:
-                agent.train_step()
-            
-        if epoch % 5 == 0:
-            agent.target_net.load_state_dict(agent.policy_net.state_dict())
-            
-    # Save the trained model model weights to backtest_reports/models/
-    os.makedirs('backtest_reports/models', exist_ok=True)
-    os.makedirs('backtest_reports/logs', exist_ok=True)
-    torch.save(agent.policy_net.state_dict(), f'backtest_reports/models/{ticker}_dqn.pth')
-            
-    # Evaluate DQN agent on test set (OOS)
-    test_env = TradingEnv(test_df)
-    agent.epsilon = 0.0  # Greedy evaluation
-    state = test_env.reset()
-    done = False
-    
-    while not done:
-        action = agent.act(state)
-        next_state, reward, done, info = test_env.step(action)
-        state = next_state
-        
-    final_rl_val = test_env.portfolio_value_history[-1]
-    rl_return = ((final_rl_val / 100000.0) - 1) * 100
-    
-    # Calculate Sharpe ratio equivalent
-    val_series = pd.Series(test_env.portfolio_value_history)
-    daily_pct = val_series.pct_change().dropna()
-    std_dev = daily_pct.std()
-    sharpe = (daily_pct.mean() / std_dev * np.sqrt(252)) if std_dev > 0 else 0.0
-    
-    # Calculate passive Buy & Hold return on the test set
     start_close = float(test_df.iloc[0]['close'])
     end_close = float(test_df.iloc[-1]['close'])
     bh_return = ((end_close / start_close) - 1) * 100
     
-    # Calculate Profit Factor
-    completed_pnl = test_env.completed_trades_pnl
-    gross_profit = sum([p for p in completed_pnl if p > 0])
-    gross_loss = abs(sum([p for p in completed_pnl if p < 0]))
-    profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (99.0 if gross_profit > 0 else 0.0)
-    
-    win_rate = (len([p for p in completed_pnl if p > 0]) / len(completed_pnl) * 100) if len(completed_pnl) > 0 else 0.0
-    
-    # Save detailed trade log
+    results_dict = {"ticker": ticker, "bh_return": bh_return}
     trade_log = [f"# Detailed Trade Log: {ticker}"]
-    trade_log.append(f"**Profit Factor**: {profit_factor:.2f} | **Win Rate**: {win_rate:.1f}%")
-    trade_log.append("\n| Date | Action | Price | Trade PnL |")
-    trade_log.append("| :--- | :--- | :--- | :--- |")
-    for t in test_env.trades_history:
-        pnl_str = f"+ Rs. {t[3]:.2f}" if t[3] > 0 else (f"- Rs. {abs(t[3]):.2f}" if t[3] < 0 else "-")
-        trade_log.append(f"| {t[0]} | {t[1]} | Rs. {t[2]:.2f} | {pnl_str} |")
+    
+    os.makedirs('backtest_reports/models', exist_ok=True)
+    os.makedirs('backtest_reports/logs', exist_ok=True)
+    
+    for mode in ["LONG_TERM", "SHORT_TERM"]:
+        state_dim = 13 if mode == "LONG_TERM" else 11
+        env = TradingEnv(train_df, mode=mode)
+        agent = DQNAgent(state_dim=state_dim, action_space=3)
         
+        model_path = f'backtest_reports/models/{ticker}_dqn_{mode.lower()}.pth'
+        if os.path.exists(model_path):
+            agent.policy_net.load_state_dict(torch.load(model_path, map_location=agent.device))
+        else:
+            step_count = 0
+            for epoch in range(epochs):
+                state = env.reset()
+                done = False
+                while not done:
+                    action = agent.act(state)
+                    next_state, reward, done, info = env.step(action)
+                    agent.memory.push(state, action, reward, next_state, done)
+                    state = next_state
+                    
+                    step_count += 1
+                    if step_count % 4 == 0:
+                        agent.train_step()
+                    
+                if epoch % 5 == 0:
+                    agent.target_net.load_state_dict(agent.policy_net.state_dict())
+                    
+            torch.save(agent.policy_net.state_dict(), model_path)
+                
+        # Evaluate OOS
+        test_env = TradingEnv(test_df, mode=mode)
+        agent.epsilon = 0.0
+        state = test_env.reset()
+        done = False
+        
+        while not done:
+            action = agent.act(state)
+            next_state, reward, done, info = test_env.step(action)
+            state = next_state
+            
+        final_rl_val = test_env.portfolio_value_history[-1]
+        rl_return = ((final_rl_val / 100000.0) - 1) * 100
+        
+        completed_pnl = test_env.completed_trades_pnl
+        gross_profit = sum([p for p in completed_pnl if p > 0])
+        gross_loss = abs(sum([p for p in completed_pnl if p < 0]))
+        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (99.0 if gross_profit > 0 else 0.0)
+        win_rate = (len([p for p in completed_pnl if p > 0]) / len(completed_pnl) * 100) if len(completed_pnl) > 0 else 0.0
+        
+        # Add to results
+        prefix = "lt" if mode == "LONG_TERM" else "st"
+        results_dict[f"{prefix}_return"] = rl_return
+        results_dict[f"{prefix}_trades"] = len(test_env.trades_history)
+        results_dict[f"{prefix}_win_rate"] = win_rate
+        results_dict[f"{prefix}_profit_factor"] = profit_factor
+        results_dict[f"{prefix}_final_val"] = final_rl_val
+        
+        trade_log.append(f"\n## {mode} Strategy")
+        trade_log.append(f"**Profit Factor**: {profit_factor:.2f} | **Win Rate**: {win_rate:.1f}% | **Return**: {rl_return:.2f}%")
+        trade_log.append("\n| Date | Action | Price | Trade PnL |")
+        trade_log.append("| :--- | :--- | :--- | :--- |")
+        for t in test_env.trades_history:
+            pnl_str = f"+ Rs. {t[3]:.2f}" if t[3] > 0 else (f"- Rs. {abs(t[3]):.2f}" if t[3] < 0 else "-")
+            trade_log.append(f"| {t[0]} | {t[1]} | Rs. {t[2]:.2f} | {pnl_str} |")
+            
     with open(f"backtest_reports/logs/trades_{ticker}.md", "w") as f:
         f.write("\n".join(trade_log))
-    
-    return {
-        "ticker": ticker,
-        "train_rows": len(train_df),
-        "test_rows": len(test_df),
-        "rl_return": rl_return,
-        "bh_return": bh_return,
-        "sharpe": sharpe,
-        "final_val": final_rl_val,
-        "trades": len(test_env.trades_history),
-        "profit_factor": profit_factor,
-        "win_rate": win_rate
-    }
+        
+    return results_dict
 
 if __name__ == "__main__":
     # Define splits: 4 years training, 1 year testing
@@ -440,10 +455,12 @@ if __name__ == "__main__":
             res = run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end)
             if res:
                 results.append(res)
-                print(f"DONE | RL OOS Return: {res['rl_return']:.2f}% | B&H Return: {res['bh_return']:.2f}% | Trades: {res['trades']}")
+                print(f"DONE | LT Ret: {res['lt_return']:.2f}% | ST Ret: {res['st_return']:.2f}% | B&H: {res['bh_return']:.2f}%")
             else:
                 print("SKIPPED (Insufficient Data)")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"FAILED: {e}")
             
     # Output final summary report
@@ -452,28 +469,35 @@ if __name__ == "__main__":
     print("="*60)
     
     report_content = []
-    report_content.append("# DQN RL Agent vs Buy & Hold Performance Report (1-Year OOS)")
+    report_content.append("# DQN RL Agent Dual-Mode Performance Report (1-Year OOS)")
     report_content.append(f"**Training Period**: {train_start} to {train_end} (4 Years)")
     report_content.append(f"**Test Period (OOS)**: {test_start} to {test_end} (1 Year)")
     report_content.append("\n## Summary Table")
-    report_content.append("| Ticker | RL Return % | B&H Return % | Outperformance % | Trades | Win Rate % | Profit Factor | Final Portfolio (RL) |")
-    report_content.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |")
+    report_content.append("| Ticker | LT Return % | ST Return % | B&H Return % | LT Trades | ST Trades | LT WinRate % | ST WinRate % |")
+    report_content.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |")
     
-    total_final_val = 0.0
+    total_lt_final = 0.0
+    total_st_final = 0.0
     initial_total_val = len(results) * 100000.0
     
     for r in results:
-        outperf = r['rl_return'] - r['bh_return']
-        total_final_val += r['final_val']
+        total_lt_final += r['lt_final_val']
+        total_st_final += r['st_final_val']
         report_content.append(
-            f"| {r['ticker']} | {r['rl_return']:.2f}% | {r['bh_return']:.2f}% | {outperf:+.2f}% | {r['trades']} | {r['win_rate']:.1f}% | {r['profit_factor']:.2f} | Rs. {r['final_val']:,.2f} |"
+            f"| {r['ticker']} | {r['lt_return']:.2f}% | {r['st_return']:.2f}% | {r['bh_return']:.2f}% | {r['lt_trades']} | {r['st_trades']} | {r['lt_win_rate']:.1f}% | {r['st_win_rate']:.1f}% |"
         )
         
-    total_return_pct = ((total_final_val / initial_total_val) - 1) * 100 if initial_total_val > 0 else 0
+    lt_total_return_pct = ((total_lt_final / initial_total_val) - 1) * 100 if initial_total_val > 0 else 0
+    st_total_return_pct = ((total_st_final / initial_total_val) - 1) * 100 if initial_total_val > 0 else 0
+    
     report_content.append("\n### Portfolio Aggregate Performance")
-    report_content.append(f"* **Total Capital Deployed**: Rs. {initial_total_val:,.2f}")
-    report_content.append(f"* **Total Final Value**: Rs. {total_final_val:,.2f}")
-    report_content.append(f"* **Total Profit / Loss**: Rs. {(total_final_val - initial_total_val):,.2f} ({total_return_pct:+.2f}%)")
+    report_content.append(f"* **Total Capital Deployed**: Rs. {initial_total_val:,.2f} per mode")
+    report_content.append(f"\n#### Long-Term Mode")
+    report_content.append(f"* **Total Final Value**: Rs. {total_lt_final:,.2f}")
+    report_content.append(f"* **Total Profit / Loss**: Rs. {(total_lt_final - initial_total_val):,.2f} ({lt_total_return_pct:+.2f}%)")
+    report_content.append(f"\n#### Short-Term Mode")
+    report_content.append(f"* **Total Final Value**: Rs. {total_st_final:,.2f}")
+    report_content.append(f"* **Total Profit / Loss**: Rs. {(total_st_final - initial_total_val):,.2f} ({st_total_return_pct:+.2f}%)")
         
     report_text = "\n".join(report_content)
     
