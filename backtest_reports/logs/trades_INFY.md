@@ -1,34 +1,34 @@
 # Detailed Trade Log: INFY
-**Profit Factor**: 1.45 | **Win Rate**: 42.9%
+
+## LONG_TERM Strategy
+**Profit Factor**: 1.61 | **Win Rate**: 40.0% | **Return**: 13.12%
 
 | Date | Action | Price | Trade PnL |
 | :--- | :--- | :--- | :--- |
-| 2025-08-22 | SHORT | Rs. 1465.07 | - |
-| 2025-08-25 | STOP_EXIT_SL_SHORT | Rs. 1509.00 | - Rs. 2987.24 |
-| 2025-08-26 | SHORT | Rs. 1506.54 | - |
-| 2025-09-05 | STOP_EXIT_TP_SHORT | Rs. 1422.82 | + Rs. 5358.08 |
-| 2025-09-08 | SHORT | Rs. 1411.29 | - |
-| 2025-09-09 | STOP_EXIT_SL_SHORT | Rs. 1481.62 | - Rs. 5063.76 |
-| 2025-09-11 | SHORT | Rs. 1486.94 | - |
-| 2025-10-08 | STOP_EXIT_SL_SHORT | Rs. 1472.46 | + Rs. 941.20 |
-| 2025-10-09 | SHORT | Rs. 1486.54 | - |
-| 2025-10-23 | STOP_EXIT_SL_SHORT | Rs. 1505.45 | - Rs. 1248.06 |
-| 2025-10-31 | SHORT | Rs. 1482.30 | - |
-| 2025-11-10 | STOP_EXIT_SL_SHORT | Rs. 1513.50 | - Rs. 2028.00 |
-| 2025-11-14 | SHORT | Rs. 1502.80 | - |
-| 2025-11-19 | STOP_EXIT_SL_SHORT | Rs. 1541.10 | - Rs. 2412.90 |
-| 2025-12-08 | SHORT | Rs. 1610.80 | - |
-| 2025-12-18 | STOP_EXIT_SL_SHORT | Rs. 1626.80 | - Rs. 912.00 |
-| 2025-12-26 | SHORT | Rs. 1656.10 | - |
-| 2026-01-07 | STOP_EXIT_SL_SHORT | Rs. 1639.00 | + Rs. 940.50 |
-| 2026-01-08 | SHORT | Rs. 1613.30 | - |
-| 2026-01-16 | STOP_EXIT_SL_SHORT | Rs. 1689.80 | - Rs. 4360.50 |
-| 2026-01-28 | SHORT | Rs. 1666.50 | - |
-| 2026-02-04 | STOP_EXIT_TP_SHORT | Rs. 1535.80 | + Rs. 6796.40 |
+| 2025-10-21 | SHORT | Rs. 1450.20 | - |
+| 2025-10-23 | STOP_EXIT_SL_SHORT | Rs. 1505.45 | - Rs. 3757.00 |
+| 2025-10-28 | SHORT | Rs. 1500.20 | - |
+| 2025-11-12 | STOP_EXIT_SL_SHORT | Rs. 1551.70 | - Rs. 3296.00 |
+| 2025-11-13 | SHORT | Rs. 1541.80 | - |
+| 2025-11-19 | STOP_EXIT_SL_SHORT | Rs. 1541.10 | + Rs. 42.00 |
+| 2025-11-20 | SHORT | Rs. 1536.50 | - |
+| 2025-12-04 | STOP_EXIT_SL_SHORT | Rs. 1597.60 | - Rs. 3666.00 |
+| 2025-12-05 | SHORT | Rs. 1616.20 | - |
+| 2025-12-22 | STOP_EXIT_SL_SHORT | Rs. 1689.60 | - Rs. 4037.00 |
+| 2025-12-23 | SHORT | Rs. 1668.30 | - |
+| 2026-01-16 | STOP_EXIT_SL_SHORT | Rs. 1689.80 | - Rs. 1096.50 |
+| 2026-01-19 | SHORT | Rs. 1681.20 | - |
+| 2026-02-04 | STOP_EXIT_TP_SHORT | Rs. 1535.80 | + Rs. 7270.00 |
 | 2026-02-05 | SHORT | Rs. 1520.20 | - |
-| 2026-02-12 | STOP_EXIT_TP_SHORT | Rs. 1386.00 | + Rs. 8320.40 |
-| 2026-02-13 | SHORT | Rs. 1369.10 | - |
-| 2026-03-19 | STOP_EXIT_TP_SHORT | Rs. 1220.80 | + Rs. 11122.50 |
-| 2026-03-20 | SHORT | Rs. 1255.90 | - |
-| 2026-04-02 | STOP_EXIT_SL_SHORT | Rs. 1300.80 | - Rs. 4085.90 |
-| 2026-04-23 | SHORT | Rs. 1240.60 | - |
+| 2026-02-23 | STOP_EXIT_TP_SHORT | Rs. 1327.50 | + Rs. 11562.00 |
+| 2026-03-02 | SHORT | Rs. 1288.90 | - |
+| 2026-04-07 | STOP_EXIT_SL_SHORT | Rs. 1339.40 | - Rs. 3989.50 |
+| 2026-04-09 | SHORT | Rs. 1331.60 | - |
+| 2026-04-24 | STOP_EXIT_TP_SHORT | Rs. 1154.60 | + Rs. 13098.00 |
+| 2026-04-27 | SHORT | Rs. 1170.30 | - |
+
+## SHORT_TERM Strategy
+**Profit Factor**: 0.00 | **Win Rate**: 0.0% | **Return**: 0.00%
+
+| Date | Action | Price | Trade PnL |
+| :--- | :--- | :--- | :--- |
