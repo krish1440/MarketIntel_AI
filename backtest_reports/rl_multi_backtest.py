@@ -4,6 +4,7 @@ import random
 import datetime
 import numpy as np
 import pandas as pd
+import yfinance as yf
 # pyrefly: ignore [missing-import]
 import torch
 # pyrefly: ignore [missing-import]
@@ -120,25 +121,51 @@ class TradingEnv:
         current_price = float(row['close'])
         date_str = str(row['date']).split(' ')[0] if 'date' in row else str(self.current_step)
         atr = float(row.get('ATR_14', current_price * 0.02))
+        rsi = float(row.get('RSI_14', 50))
+        adx = float(row.get('ADX_14', 20))
+        nifty_regime = int(row.get('Nifty_Bull_Regime', 1))
         
         action_detail = "HOLD"
-        adx = float(row.get('ADX_14', 20))
         
-        # Mode-specific parameters
+        # Mode-specific baseline parameters
         if self.mode == "LONG_TERM":
-            atr_multiplier = 2.5 if adx > 25 else 2.0
+            base_atr_multiplier = 2.5 if adx > 25 else 2.0
             tp_multiplier = 4.0
             max_days = 30
         else: # SHORT_TERM
-            atr_multiplier = 0.8
-            tp_multiplier = 1.2
-            max_days = 5
+            base_atr_multiplier = 1.0
+            tp_multiplier = 1.5
+            max_days = 7
             
         exited = False
         if self.position_type == "LONG" and self.shares > 0:
             self.days_held += 1
             self.highest_price = max(self.highest_price, current_price)
-            trailing_stop = self.highest_price - (atr_multiplier * self.entry_atr)
+            
+            # --- DYNAMIC TRAILING STOP LOGIC ---
+            profit_pct = (current_price - self.entry_price) / self.entry_price
+            dynamic_multiplier = base_atr_multiplier
+            
+            # 1. Profit-Locking: Tighten as profit grows
+            if self.mode == "LONG_TERM":
+                if profit_pct > 0.50:
+                    dynamic_multiplier *= 0.6
+                elif profit_pct > 0.25:
+                    dynamic_multiplier *= 0.8
+                # 2. Momentum-Choking: Tighten on danger
+                if rsi > 80 or adx < 20:
+                    dynamic_multiplier = 1.5
+            else:
+                if profit_pct > 0.30:
+                    dynamic_multiplier *= 0.6  # Tighten by 40%
+                elif profit_pct > 0.15:
+                    dynamic_multiplier *= 0.8  # Tighten by 20%
+                # 2. Momentum-Choking: Tighten aggressively on danger
+                if rsi > 75 or adx < 20:
+                    dynamic_multiplier = 1.0  # Extremely tight stop
+                
+            # 3. Use current ATR instead of entry ATR
+            trailing_stop = self.highest_price - (dynamic_multiplier * atr)
             take_profit = self.entry_price + (tp_multiplier * self.entry_atr)
             
             pnl = (current_price - self.entry_price) * self.shares
@@ -174,7 +201,27 @@ class TradingEnv:
         elif self.position_type == "SHORT" and self.shares > 0:
             self.days_held += 1
             self.lowest_price = min(self.lowest_price, current_price)
-            trailing_stop = self.lowest_price + (atr_multiplier * self.entry_atr)
+            
+            # --- DYNAMIC TRAILING STOP LOGIC (SHORT) ---
+            profit_pct = (self.entry_price - current_price) / self.entry_price
+            dynamic_multiplier = base_atr_multiplier
+            
+            if self.mode == "LONG_TERM":
+                if profit_pct > 0.50:
+                    dynamic_multiplier *= 0.6
+                elif profit_pct > 0.25:
+                    dynamic_multiplier *= 0.8
+                if rsi < 20 or adx < 20:
+                    dynamic_multiplier = 1.5
+            else:
+                if profit_pct > 0.30:
+                    dynamic_multiplier *= 0.6
+                elif profit_pct > 0.15:
+                    dynamic_multiplier *= 0.8
+                if rsi < 25 or adx < 20:
+                    dynamic_multiplier = 1.0
+                
+            trailing_stop = self.lowest_price + (dynamic_multiplier * atr)
             take_profit = self.entry_price - (tp_multiplier * self.entry_atr)
             
             pnl = (self.entry_price - current_price) * self.shares
@@ -207,9 +254,32 @@ class TradingEnv:
                 self.days_held = 0
                 exited = True
 
+        # 2. Process Agent-Driven Decisions with Portfolio Filters
         if (self.position_type is None) and (not exited):
-            if action == 1 and self.capital >= current_price:
-                shares_to_buy = int(self.capital // current_price)
+            # --- PORTFOLIO RISK FILTERS ---
+            can_long = True
+            can_short = True
+            
+            if self.mode == "LONG_TERM":
+                if adx < 25: 
+                    can_long = False  # Chop Filter
+                if nifty_regime == 0:
+                    can_long = False  # Global Bear Market Filter
+            else:
+                # SHORT_TERM Filters
+                if adx < 15:
+                    can_long = False
+                    can_short = False  # Chop filter for ST
+                sma50 = float(row.get('SMA_50', current_price))
+                if current_price > 1.15 * sma50:
+                    can_short = False  # Don't short a raging bull
+                    
+            if action == 1 and can_long and self.capital >= current_price:
+                # --- DYNAMIC POSITION SIZING ---
+                # Give full allocation to both modes since Chop Filter provides protection
+                allocation = self.capital * 1.0
+                    
+                shares_to_buy = int(allocation // current_price)
                 if shares_to_buy > 0:
                     self.shares = shares_to_buy
                     self.capital -= self.shares * current_price
@@ -221,8 +291,10 @@ class TradingEnv:
                     action_detail = "BUY"
                     self.trades_history.append((date_str, "BUY", current_price, 0.0))
                     
-            elif action == 2 and self.capital >= current_price:
-                shares_to_short = int(self.capital // current_price)
+            elif action == 2 and can_short and self.capital >= current_price:
+                # Short positions can be taken even in chop/bear markets
+                allocation = self.capital * 1.0  # Full allocation for shorting
+                shares_to_short = int(allocation // current_price)
                 if shares_to_short > 0:
                     self.shares = shares_to_short
                     self.position_type = "SHORT"
@@ -317,7 +389,7 @@ class DQNAgent:
             
         return loss.item()
 
-def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end, epochs=100):
+def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end, global_regime_df=None, epochs=100):
     session = get_session()
     stock = session.query(Stock).filter_by(ticker=ticker).first()
     if not stock:
@@ -341,6 +413,18 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
         
     # Calculate technical indicators
     prices_df = calculate_technical_indicators(prices_df)
+    
+    # Merge Global Market Regime
+    if global_regime_df is not None and not global_regime_df.empty:
+        # Assuming prices_df['date'] is datetime.date, convert to datetime to merge
+        prices_df['date'] = pd.to_datetime(prices_df['date'])
+        prices_df = prices_df.set_index('date').join(global_regime_df, how='left').reset_index()
+        # Default to 1 (bull) if missing, then ffill
+        prices_df['Nifty_Bull_Regime'] = prices_df['Nifty_Bull_Regime'].ffill().fillna(1)
+        prices_df['date'] = prices_df['date'].dt.date
+    else:
+        prices_df['Nifty_Bull_Regime'] = 1
+
     prices_df = prices_df.dropna(subset=['close', 'SMA_100', 'BB_Width', 'SMA_20', 'RSI_14', 'MACD', 'ATR_14']).reset_index(drop=True)
     
     # Split into train and test purely based on dates
@@ -357,15 +441,16 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
     results_dict = {"ticker": ticker, "bh_return": bh_return}
     trade_log = [f"# Detailed Trade Log: {ticker}"]
     
-    os.makedirs('backtest_reports/models', exist_ok=True)
-    os.makedirs('backtest_reports/logs', exist_ok=True)
+    
+    os.makedirs('backtest_reports/models_phase2', exist_ok=True)
+    os.makedirs('backtest_reports/logs_phase2', exist_ok=True)
     
     for mode in ["LONG_TERM", "SHORT_TERM"]:
         state_dim = 13 if mode == "LONG_TERM" else 11
         env = TradingEnv(train_df, mode=mode)
         agent = DQNAgent(state_dim=state_dim, action_space=3)
         
-        model_path = f'backtest_reports/models/{ticker}_dqn_{mode.lower()}.pth'
+        model_path = f'backtest_reports/models_phase2/{ticker}_dqn_{mode.lower()}.pth'
         if os.path.exists(model_path):
             agent.policy_net.load_state_dict(torch.load(model_path, map_location=agent.device))
         else:
@@ -391,6 +476,7 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
         # Evaluate OOS
         test_env = TradingEnv(test_df, mode=mode)
         agent.epsilon = 0.0
+        agent.policy_net.eval()  # Lock the dropout layer for deterministic predictions
         state = test_env.reset()
         done = False
         
@@ -424,7 +510,7 @@ def run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end
             pnl_str = f"+ Rs. {t[3]:.2f}" if t[3] > 0 else (f"- Rs. {abs(t[3]):.2f}" if t[3] < 0 else "-")
             trade_log.append(f"| {t[0]} | {t[1]} | Rs. {t[2]:.2f} | {pnl_str} |")
             
-    with open(f"backtest_reports/logs/trades_{ticker}.md", "w") as f:
+    with open(f"backtest_reports/logs_phase2/trades_{ticker}.md", "w") as f:
         f.write("\n".join(trade_log))
         
     return results_dict
@@ -445,6 +531,20 @@ if __name__ == "__main__":
         "POWERGRID", "RELIANCE", "SBILIFE", "SHRIRAMFIN", "SBIN", "SUNPHARMA", "TCS", "TATACONSUM", 
         "TATAMOTORS", "TATASTEEL", "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO"
     ]
+    print("Fetching Global Market Regime Data (Nifty 50)...")
+    nifty_df = yf.download("^NSEI", start=train_start - datetime.timedelta(days=365), end=test_end, progress=False)
+    if not nifty_df.empty:
+        if isinstance(nifty_df.columns, pd.MultiIndex):
+            nifty_df.columns = nifty_df.columns.droplevel(1)
+        nifty_df['SMA_200'] = nifty_df['Close'].rolling(window=200).mean()
+        nifty_df['Nifty_Bull_Regime'] = (nifty_df['Close'] > nifty_df['SMA_200']).astype(int)
+        if nifty_df.index.tz is not None:
+            nifty_df.index = nifty_df.index.tz_localize(None)
+        nifty_df.index = nifty_df.index.normalize()
+        global_regime = nifty_df[['Nifty_Bull_Regime']].copy()
+    else:
+        global_regime = pd.DataFrame()
+        
     print("="*60)
     print("RUNNING MULTI-STOCK DQN RL BACKTEST COMPARISON")
     print(f"Train period: {train_start} to {train_end}")
@@ -455,7 +555,7 @@ if __name__ == "__main__":
     for ticker in tickers:
         print(f"Processing {ticker:10s} ... ", end="", flush=True)
         try:
-            res = run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end)
+            res = run_backtest_for_ticker(ticker, train_start, train_end, test_start, test_end, global_regime_df=global_regime)
             if res:
                 results.append(res)
                 print(f"DONE | LT Ret: {res['lt_return']:.2f}% | ST Ret: {res['st_return']:.2f}% | B&H: {res['bh_return']:.2f}%")
