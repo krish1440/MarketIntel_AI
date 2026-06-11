@@ -22,13 +22,9 @@
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS stocks (
     id SERIAL PRIMARY KEY,
-    -- Unique ticker identifier (e.g., 'RELIANCE', 'TCS').
     ticker VARCHAR(20) UNIQUE NOT NULL,
-    -- Full legal name of the corporation.
     name VARCHAR(100),
-    -- Yahoo Finance / Exchange symbol for NSE (e.g., 'RELIANCE.NS').
     nse_symbol VARCHAR(20),
-    -- Yahoo Finance / Exchange symbol for BSE (e.g., 'RELIANCE.BO').
     bse_symbol VARCHAR(20)
 );
 
@@ -37,18 +33,13 @@ CREATE TABLE IF NOT EXISTS stocks (
 -- DESCRIPTION: Captures real-time price snapshots for dashboard visualization.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS live_quotes (
-    id SERIAL PRIMARY KEY,
-    -- Reference to the parent stock in the 'stocks' table.
+    id SERIAL PRIMARY KEY,  
     stock_id INTEGER REFERENCES stocks(id),
-    -- The source exchange for this quote ('NSE' or 'BSE').
     exchange VARCHAR(10),
-    -- Current market price with 2-decimal precision.
     price DECIMAL(15, 2) NOT NULL,
-    -- Intraday percentage change from previous close.
     change_percent DECIMAL(10, 4),
-    -- Total traded volume in the current session.
     volume BIGINT,
-    -- Timestamp of record creation (UTC).
+
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -58,19 +49,14 @@ CREATE TABLE IF NOT EXISTS live_quotes (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS historical_prices (
     id SERIAL PRIMARY KEY,
-    -- Reference to the parent stock.
     stock_id INTEGER REFERENCES stocks(id),
-    -- The source exchange for this price point.
     exchange VARCHAR(10),
-    -- The specific trading date.
     date DATE NOT NULL,
-    -- OHLCV Data Points
     open DECIMAL(15, 2),
     high DECIMAL(15, 2),
     low DECIMAL(15, 2),
     close DECIMAL(15, 2),
     volume BIGINT,
-    -- UNIQUE CONSTRAINT: Prevents duplicate time-series entries during sync.
     UNIQUE (stock_id, exchange, date)
 );
 
@@ -80,17 +66,11 @@ CREATE TABLE IF NOT EXISTS historical_prices (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS news_articles (
     id SERIAL PRIMARY KEY,
-    -- Reference to the related stock asset.
     stock_id INTEGER REFERENCES stocks(id),
-    -- The article headline.
     title TEXT NOT NULL,
-    -- A brief summary of the article content.
     summary TEXT,
-    -- Unique URL for the article (acts as an idempotency key).
     url TEXT UNIQUE NOT NULL,
-    -- Publication timestamp.
     published_at TIMESTAMP,
-    -- AI-Generated Sentiment Score: -1.0 (Bearish) to 1.0 (Bullish).
     sentiment_score DECIMAL(10, 4)
 );
 
