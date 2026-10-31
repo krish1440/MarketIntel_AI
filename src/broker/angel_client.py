@@ -99,6 +99,12 @@ class AngelClient:
                     return response.get("data", [])
                 else:
                     msg = response.get("message", "") if response else ""
+                    err_code = response.get("errorCode", "") if response else ""
+                    if err_code == "AG8001" or "invalid token" in msg.lower():
+                        logger.warning("Angel One session token expired. Auto-renewing session via TOTP...")
+                        if self.login():
+                            time.sleep(1.0)
+                            continue
                     if "exceeding access rate" in msg.lower() or "rate" in msg.lower():
                         sleep_time = attempt * 2.0
                         logger.warning(f"Rate limited by SmartAPI. Sleeping {sleep_time:.1f}s before retry ({attempt}/{max_retries})...")
@@ -107,6 +113,11 @@ class AngelClient:
                     return None
             except Exception as e:
                 err_str = str(e).lower()
+                if "invalid token" in err_str or "ag8001" in err_str:
+                    logger.warning("Token exception detected. Auto-renewing session via TOTP...")
+                    if self.login():
+                        time.sleep(1.0)
+                        continue
                 if "exceeding access rate" in err_str or "access denied" in err_str:
                     sleep_time = attempt * 2.5
                     logger.warning(f"Rate limit triggered. Sleeping {sleep_time:.1f}s before retry ({attempt}/{max_retries})...")
