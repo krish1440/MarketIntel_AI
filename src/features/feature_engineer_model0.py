@@ -120,3 +120,4 @@ class Model0FeatureEngineer:
         except Exception as e:
             logger.warning(f"Error computing Model 0 features for {symbol}: {e}")
             return None
+

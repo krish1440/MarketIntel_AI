@@ -11,11 +11,9 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from src.config.settings import settings
 from src.features.feature_engineer_model0 import Model0FeatureEngineer
-from src.features.polars_indicators import (
-    calc_log_returns, calc_ema, calc_sma, calc_atr, calc_bollinger_bands,
-    calc_rsi, calc_parkinson_volatility, calc_garman_klass_volatility,
-    calc_rvol, calc_candle_anatomy, calc_distance_to_ema_atr
-)
+from src.features.feature_engineer_model1 import Model1FeatureEngineer
+from src.features.feature_engineer_model2 import Model2FeatureEngineer
+from src.features.feature_engineer_model3 import Model3FeatureEngineer
 
 logger = logging.getLogger("PolarsFeatureEngine")
 
@@ -23,7 +21,11 @@ class PolarsFeatureEngine:
     """
     Master Vectorized Feature Engineering Engine.
     Processes the entire Indian Equity Universe (2,357 stocks) in parallel
-    and writes partitioned Parquet feature tables into the 4 decoupled Gold Stores.
+    and writes partitioned Parquet feature tables into the 4 decoupled Gold Stores:
+      - Model 0: gold/features_screener_ranking/ (28 features)
+      - Model 1: gold/features_short_term_positional/ (25 features)
+      - Model 2: gold/features_long_term_swing/ (25 features)
+      - Model 3: gold/features_price_corridor/ (20 features)
     """
 
     def __init__(self):
@@ -36,7 +38,11 @@ class PolarsFeatureEngine:
         for d in [self.gold_model0_dir, self.gold_model1_dir, self.gold_model2_dir, self.gold_model3_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
-        self.model0_eng = Model0FeatureEngineer()
+        logger.info("Initializing 4 specialized Feature Engineers...")
+        self.m0 = Model0FeatureEngineer()
+        self.m1 = Model1FeatureEngineer()
+        self.m2 = Model2FeatureEngineer()
+        self.m3 = Model3FeatureEngineer()
 
     def process_all_stocks(self, limit: Optional[int] = None):
         """Processes all stocks across the universe and builds the Gold Feature lakehouse."""
@@ -45,35 +51,59 @@ class PolarsFeatureEngine:
             stock_files = stock_files[:limit]
 
         total = len(stock_files)
-        logger.info(f"Starting Gold Feature Extraction for {total} stocks...")
+        logger.info(f"Starting Gold Feature Extraction for {total} stocks across ALL 4 MODELS...")
         start_time = time.time()
         
-        success = 0
+        m0_count = m1_count = m2_count = m3_count = 0
         total_bars = 0
 
         for idx, file_path in enumerate(stock_files, 1):
             symbol = file_path.stem
             try:
-                # 1. Model 0 Feature Matrix
-                m0_df = self.model0_eng.compute_for_stock(symbol)
-                if m0_df is not None and len(m0_df) > 0:
-                    out_path = self.gold_model0_dir / f"{symbol}.parquet"
-                    m0_df.write_parquet(out_path, compression="zstd")
-                    total_bars += len(m0_df)
-                    success += 1
+                # 1. Model 0 Features (Pre-Market Screener)
+                df0 = self.m0.compute_for_stock(symbol)
+                if df0 is not None and len(df0) > 0:
+                    df0.write_parquet(self.gold_model0_dir / f"{symbol}.parquet", compression="zstd")
+                    m0_count += 1
+                    total_bars += len(df0)
+
+                # 2. Model 1 Features (Positional Swing < 1 Year)
+                df1 = self.m1.compute_for_stock(symbol)
+                if df1 is not None and len(df1) > 0:
+                    df1.write_parquet(self.gold_model1_dir / f"{symbol}.parquet", compression="zstd")
+                    m1_count += 1
+
+                # 3. Model 2 Features (Wealth Compounding > 1 Year)
+                df2 = self.m2.compute_for_stock(symbol)
+                if df2 is not None and len(df2) > 0:
+                    df2.write_parquet(self.gold_model2_dir / f"{symbol}.parquet", compression="zstd")
+                    m2_count += 1
+
+                # 4. Model 3 Features (Price Corridors)
+                df3 = self.m3.compute_for_stock(symbol)
+                if df3 is not None and len(df3) > 0:
+                    df3.write_parquet(self.gold_model3_dir / f"{symbol}.parquet", compression="zstd")
+                    m3_count += 1
 
                 if idx % 100 == 0 or idx == total:
                     elapsed = time.time() - start_time
                     rate = total_bars / max(elapsed, 0.001)
-                    logger.info(f"Progress: [{idx}/{total}] stocks | {total_bars:,} bars | {rate:,.0f} bars/sec")
+                    logger.info(
+                        f"Progress: [{idx}/{total}] stocks | M0:{m0_count} M1:{m1_count} M2:{m2_count} M3:{m3_count} | "
+                        f"{total_bars:,} bars | {rate:,.0f} bars/sec"
+                    )
 
             except Exception as e:
                 logger.warning(f"Error processing {symbol}: {e}")
 
         total_time = time.time() - start_time
         logger.info("=" * 70)
-        logger.info(f"FEATURE PIPELINE COMPLETE: {success}/{total} stocks processed.")
-        logger.info(f"Total Bars Processed: {total_bars:,} in {total_time:.2f} seconds ({total_bars/max(total_time, 0.001):,.0f} bars/sec)")
+        logger.info(f"PHASE 2 MASTER FEATURE PIPELINE COMPLETE!")
+        logger.info(f"Model 0 (Screener): {m0_count}/{total} stocks")
+        logger.info(f"Model 1 (Positional < 1Y): {m1_count}/{total} stocks")
+        logger.info(f"Model 2 (Compounding > 1Y): {m2_count}/{total} stocks")
+        logger.info(f"Model 3 (Price Corridors): {m3_count}/{total} stocks")
+        logger.info(f"Total Bars Processed: {total_bars:,} in {total_time:.2f}s ({total_bars/max(total_time, 0.001):,.0f} bars/sec)")
         logger.info("=" * 70)
 
 if __name__ == "__main__":

@@ -123,3 +123,63 @@ def calc_distance_to_ema_atr(
 ) -> pl.Expr:
     """Normalized dimensionless distance from EMA divided by ATR."""
     return ((pl.col(close_col) - pl.col(ema_col)) / (pl.col(atr_col) + 1e-8)).alias(alias)
+
+
+
+def calc_adx(high_col: str = "high", low_col: str = "low", close_col: str = "close", period: int = 14) -> pl.Expr:
+    """Average Directional Index (ADX) measuring non-directional trend strength."""
+    prev_high = pl.col(high_col).shift(1)
+    prev_low = pl.col(low_col).shift(1)
+    
+    up_move = pl.col(high_col) - prev_high
+    down_move = prev_low - pl.col(low_col)
+    
+    pos_dm = pl.when((up_move > down_move) & (up_move > 0)).then(up_move).otherwise(0.0)
+    neg_dm = pl.when((down_move > up_move) & (down_move > 0)).then(down_move).otherwise(0.0)
+    
+    tr = calc_true_range(high_col, low_col, close_col)
+    smooth_tr = tr.ewm_mean(alpha=1.0 / period, adjust=False)
+    
+    pos_di = 100.0 * (pos_dm.ewm_mean(alpha=1.0 / period, adjust=False) / (smooth_tr + 1e-8))
+    neg_di = 100.0 * (neg_dm.ewm_mean(alpha=1.0 / period, adjust=False) / (smooth_tr + 1e-8))
+    
+    dx = 100.0 * ((pos_di - neg_di).abs() / (pos_di + neg_di + 1e-8))
+    adx = dx.ewm_mean(alpha=1.0 / period, adjust=False).alias(f"adx_{period}")
+    return adx
+
+def calc_rolling_sharpe(ret_col: str = "ret_1d", window: int = 63) -> pl.Expr:
+    """Rolling Annualized Sharpe Ratio."""
+    mean_r = pl.col(ret_col).rolling_mean(window_size=window)
+    std_r = pl.col(ret_col).rolling_std(window_size=window)
+    return ((mean_r / (std_r + 1e-8)) * math.sqrt(252.0)).alias(f"sharpe_ratio_{window}d")
+
+def calc_rolling_sortino(ret_col: str = "ret_1d", window: int = 252) -> pl.Expr:
+    """Rolling Annualized Sortino Ratio (Downside deviation only)."""
+    mean_r = pl.col(ret_col).rolling_mean(window_size=window)
+    downside = pl.when(pl.col(ret_col) < 0).then(pl.col(ret_col)).otherwise(0.0)
+    downside_dev = downside.pow(2).rolling_mean(window_size=window).sqrt()
+    return ((mean_r / (downside_dev + 1e-8)) * math.sqrt(252.0)).alias(f"sortino_ratio_{window}d")
+
+def calc_rolling_drawdown(close_col: str = "close", window: int = 252) -> pl.Expr:
+    """Rolling Maximum Drawdown over the window."""
+    peak = pl.col(close_col).rolling_max(window_size=window)
+    dd = (pl.col(close_col) - peak) / (peak + 1e-8)
+    return dd.alias(f"max_drawdown_{window}d")
+
+def calc_keltner_channels(high_col: str = "high", low_col: str = "low", close_col: str = "close", ema_period: int = 20, atr_multiplier: float = 2.0) -> List[pl.Expr]:
+    """Keltner Channels price envelope."""
+    ema = pl.col(close_col).ewm_mean(span=ema_period, adjust=False)
+    atr = calc_atr(high_col, low_col, close_col, 10)
+    upper = (ema + (atr * atr_multiplier)).alias("kc_upper")
+    lower = (ema - (atr * atr_multiplier)).alias("kc_lower")
+    spread = ((upper - lower) / (pl.col(close_col) + 1e-8)).alias("keltner_spread")
+    return [upper, ema.alias("kc_middle"), lower, spread]
+
+def calc_variance_ratio(close_col: str = "close", short_k: int = 1, long_q: int = 5, window: int = 60) -> pl.Expr:
+    """Variance Ratio test for trend persistence vs random walk."""
+    r_short = (pl.col(close_col) / pl.col(close_col).shift(short_k)).log()
+    r_long = (pl.col(close_col) / pl.col(close_col).shift(long_q)).log()
+    var_short = r_short.rolling_var(window_size=window)
+    var_long = r_long.rolling_var(window_size=window)
+    vr = (var_long / (long_q * var_short + 1e-8)).alias(f"variance_ratio_{window}d")
+    return vr
