@@ -62,13 +62,13 @@ class DuckDBClient:
         except Exception as e:
             logger.debug(f"Could not register silver_security_master view: {e}")
 
-    def query(self, sql: str) -> duckdb.DuckDBPyRelation:
+    def query(self, sql: str):
         """Executes arbitrary SQL query and returns DuckDB relation."""
-        return self.conn.execute(sql)
+        return self.conn.sql(sql)
 
     def query_df(self, sql: str):
         """Executes SQL and returns Polars DataFrame."""
-        return self.conn.execute(sql).pl()
+        return self.conn.sql(sql).pl()
 
     def get_stock_history(self, symbol: str, start_date: str = "2020-01-01") -> duckdb.DuckDBPyRelation:
         """Fetch stock daily history."""
