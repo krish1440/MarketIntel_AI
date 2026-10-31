@@ -84,3 +84,4 @@ class DuckDBClient:
         """Closes DuckDB connection cleanly."""
         if self.conn:
             self.conn.close()
+

@@ -46,41 +46,60 @@ class PolarsFeatureEngine:
 
     def process_all_stocks(self, limit: Optional[int] = None):
         """Processes all stocks across the universe and builds the Gold Feature lakehouse."""
-        stock_files = list(self.silver_ohlcv_dir.glob("*.parquet"))
+        exchange_dir = self.silver_ohlcv_dir / "exchange=NSE"
+        stock_dirs = sorted(list(exchange_dir.glob("symbol=*")))
         if limit:
-            stock_files = stock_files[:limit]
+            stock_dirs = stock_dirs[:limit]
 
-        total = len(stock_files)
+        total = len(stock_dirs)
         logger.info(f"Starting Gold Feature Extraction for {total} stocks across ALL 4 MODELS...")
         start_time = time.time()
         
         m0_count = m1_count = m2_count = m3_count = 0
         total_bars = 0
 
-        for idx, file_path in enumerate(stock_files, 1):
-            symbol = file_path.stem
+        for idx, sdir in enumerate(stock_dirs, 1):
+            symbol = sdir.name.split("=")[-1]
+            parquet_file = sdir / "data.parquet"
+            if not parquet_file.exists():
+                continue
+
+            # Skip if already generated (resumable)
+            m0_file = self.gold_model0_dir / f"{symbol}.parquet"
+            if m0_file.exists():
+                m0_count += 1
+                m1_count += 1
+                m2_count += 1
+                m3_count += 1
+                continue
+
             try:
+                # Read stock data ONCE into memory
+                df = pl.read_parquet(parquet_file)
+                if len(df) == 0:
+                    continue
+
                 # 1. Model 0 Features (Pre-Market Screener)
-                df0 = self.m0.compute_for_stock(symbol)
+                df0 = self.m0.compute_for_stock(symbol, df)
                 if df0 is not None and len(df0) > 0:
                     df0.write_parquet(self.gold_model0_dir / f"{symbol}.parquet", compression="zstd")
                     m0_count += 1
                     total_bars += len(df0)
 
                 # 2. Model 1 Features (Positional Swing < 1 Year)
-                df1 = self.m1.compute_for_stock(symbol)
+                df1 = self.m1.compute_for_stock(symbol, df)
                 if df1 is not None and len(df1) > 0:
                     df1.write_parquet(self.gold_model1_dir / f"{symbol}.parquet", compression="zstd")
                     m1_count += 1
 
                 # 3. Model 2 Features (Wealth Compounding > 1 Year)
-                df2 = self.m2.compute_for_stock(symbol)
+                df2 = self.m2.compute_for_stock(symbol, df)
                 if df2 is not None and len(df2) > 0:
                     df2.write_parquet(self.gold_model2_dir / f"{symbol}.parquet", compression="zstd")
                     m2_count += 1
 
                 # 4. Model 3 Features (Price Corridors)
-                df3 = self.m3.compute_for_stock(symbol)
+                df3 = self.m3.compute_for_stock(symbol, df)
                 if df3 is not None and len(df3) > 0:
                     df3.write_parquet(self.gold_model3_dir / f"{symbol}.parquet", compression="zstd")
                     m3_count += 1
@@ -99,10 +118,10 @@ class PolarsFeatureEngine:
         total_time = time.time() - start_time
         logger.info("=" * 70)
         logger.info(f"PHASE 2 MASTER FEATURE PIPELINE COMPLETE!")
-        logger.info(f"Model 0 (Screener): {m0_count}/{total} stocks")
-        logger.info(f"Model 1 (Positional < 1Y): {m1_count}/{total} stocks")
-        logger.info(f"Model 2 (Compounding > 1Y): {m2_count}/{total} stocks")
-        logger.info(f"Model 3 (Price Corridors): {m3_count}/{total} stocks")
+        logger.info(f"Model 0 (Screener): {m0_count}/{total} stocks generated in Gold")
+        logger.info(f"Model 1 (Positional < 1Y): {m1_count}/{total} stocks generated in Gold")
+        logger.info(f"Model 2 (Compounding > 1Y): {m2_count}/{total} stocks generated in Gold")
+        logger.info(f"Model 3 (Price Corridors): {m3_count}/{total} stocks generated in Gold")
         logger.info(f"Total Bars Processed: {total_bars:,} in {total_time:.2f}s ({total_bars/max(total_time, 0.001):,.0f} bars/sec)")
         logger.info("=" * 70)
 

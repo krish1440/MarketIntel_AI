@@ -21,18 +21,23 @@ class Model3FeatureEngineer:
         self.gold_output_dir = settings.GOLD_DIR / "features_price_corridor"
         self.gold_output_dir.mkdir(parents=True, exist_ok=True)
 
-    def compute_for_stock(self, symbol: str) -> Optional[pl.DataFrame]:
+    def compute_for_stock(self, symbol: str, df: Optional[pl.DataFrame] = None) -> Optional[pl.DataFrame]:
         """Computes Model 3's 20-feature volatility corridor matrix for a single stock."""
-        stock_file = self.silver_ohlcv_dir / f"{symbol}.parquet"
-        if not stock_file.exists():
-            return None
+        if df is None:
+            stock_file = self.silver_ohlcv_dir / "exchange=NSE" / f"symbol={symbol}" / "data.parquet"
+            if not stock_file.exists():
+                return None
+            try:
+                df = pl.read_parquet(stock_file)
+            except Exception:
+                return None
 
         try:
-            df = pl.read_parquet(stock_file)
             if len(df) < 126:
                 return None
 
-            df = df.sort("timestamp").with_columns(pl.col("timestamp").dt.date().alias("date"))
+            date_col = "date" if "date" in df.columns else "timestamp"
+            df = df.sort(date_col).with_columns(pl.col(date_col).cast(pl.Date).alias("date_key"))
 
             # --- Category A: Multi-Scale Volatility Estimators ---
             parkinson20 = ind.calc_parkinson_volatility("high", "low", 20)
@@ -61,7 +66,8 @@ class Model3FeatureEngineer:
             ] + kc_exprs + bb_exprs)
 
             # Add symbol column
-            df = df.with_columns(pl.lit(symbol).alias("symbol"))
+            if "symbol" not in df.columns:
+                df = df.with_columns(pl.lit(symbol).alias("symbol"))
 
             return df
 

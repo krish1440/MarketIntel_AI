@@ -38,9 +38,8 @@ class Model0FeatureEngineer:
         macro_path = self.silver_macro_dir / "macro_indices.parquet"
         if macro_path.exists():
             macro_df = pl.read_parquet(macro_path)
-            # Normalize timestamp to date
-            macro_df = macro_df.with_columns(pl.col("timestamp").dt.date().alias("date"))
-            self.macro_df = macro_df
+            col = "timestamp" if "timestamp" in macro_df.columns else "date"
+            self.macro_df = macro_df.with_columns(pl.col(col).cast(pl.Date).alias("date_key"))
         else:
             self.macro_df = None
 
@@ -49,36 +48,34 @@ class Model0FeatureEngineer:
         for asset in ["SP500", "NASDAQ100", "CRUDE_OIL", "USD_INR", "US10Y_YIELD"]:
             p = self.silver_global_dir / f"{asset}.parquet"
             if p.exists():
-                gdf = pl.read_parquet(p).with_columns(pl.col("timestamp").dt.date().alias("date"))
-                self.global_dfs[asset] = gdf
+                gdf = pl.read_parquet(p)
+                col = "timestamp" if "timestamp" in gdf.columns else "date"
+                self.global_dfs[asset] = gdf.with_columns(pl.col(col).cast(pl.Date).alias("date_key"))
 
         # 4. FII / DII Institutional Flows
         fii_path = self.silver_macro_dir / "fii_dii_flows.parquet"
         if fii_path.exists():
-            self.fii_df = pl.read_parquet(fii_path).with_columns(pl.col("date").cast(pl.Date))
+            self.fii_df = pl.read_parquet(fii_path).with_columns(pl.col("date").cast(pl.Date).alias("date_key"))
         else:
             self.fii_df = None
 
-        # 5. Corporate Calendar / Earnings
-        corp_path = self.silver_corp_dir / "corporate_calendar.parquet"
-        if corp_path.exists():
-            self.corp_df = pl.read_parquet(corp_path)
-        else:
-            self.corp_df = None
-
-    def compute_for_stock(self, symbol: str) -> Optional[pl.DataFrame]:
+    def compute_for_stock(self, symbol: str, df: Optional[pl.DataFrame] = None) -> Optional[pl.DataFrame]:
         """Computes Model 0's 28 feature matrix for a single stock."""
-        stock_file = self.silver_ohlcv_dir / f"{symbol}.parquet"
-        if not stock_file.exists():
-            return None
-
-        try:
-            df = pl.read_parquet(stock_file)
-            if len(df) < 252:
-                # Need at least 1 year of history for stable 200 EMA & 52-week metrics
+        if df is None:
+            stock_file = self.silver_ohlcv_dir / "exchange=NSE" / f"symbol={symbol}" / "data.parquet"
+            if not stock_file.exists():
+                return None
+            try:
+                df = pl.read_parquet(stock_file)
+            except Exception:
                 return None
 
-            df = df.sort("timestamp").with_columns(pl.col("timestamp").dt.date().alias("date"))
+        try:
+            if len(df) < 252:
+                return None
+
+            date_col = "date" if "date" in df.columns else "timestamp"
+            df = df.sort(date_col).with_columns(pl.col(date_col).cast(pl.Date).alias("date_key"))
 
             # --- Category A: Momentum & Trend Structure ---
             ret_exprs = ind.calc_log_returns("close", [1, 3, 5, 21])
@@ -113,11 +110,11 @@ class Model0FeatureEngineer:
             )
 
             # Add symbol column
-            df = df.with_columns(pl.lit(symbol).alias("symbol"))
+            if "symbol" not in df.columns:
+                df = df.with_columns(pl.lit(symbol).alias("symbol"))
 
             return df
 
         except Exception as e:
             logger.warning(f"Error computing Model 0 features for {symbol}: {e}")
             return None
-

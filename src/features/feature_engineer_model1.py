@@ -21,18 +21,23 @@ class Model1FeatureEngineer:
         self.gold_output_dir = settings.GOLD_DIR / "features_short_term_positional"
         self.gold_output_dir.mkdir(parents=True, exist_ok=True)
 
-    def compute_for_stock(self, symbol: str) -> Optional[pl.DataFrame]:
+    def compute_for_stock(self, symbol: str, df: Optional[pl.DataFrame] = None) -> Optional[pl.DataFrame]:
         """Computes Model 1's 25-feature matrix for a single stock."""
-        stock_file = self.silver_ohlcv_dir / f"{symbol}.parquet"
-        if not stock_file.exists():
-            return None
+        if df is None:
+            stock_file = self.silver_ohlcv_dir / "exchange=NSE" / f"symbol={symbol}" / "data.parquet"
+            if not stock_file.exists():
+                return None
+            try:
+                df = pl.read_parquet(stock_file)
+            except Exception:
+                return None
 
         try:
-            df = pl.read_parquet(stock_file)
             if len(df) < 252:
                 return None
 
-            df = df.sort("timestamp").with_columns(pl.col("timestamp").dt.date().alias("date"))
+            date_col = "date" if "date" in df.columns else "timestamp"
+            df = df.sort(date_col).with_columns(pl.col(date_col).cast(pl.Date).alias("date_key"))
 
             # --- Category A: Intermediate Momentum & Trend ---
             ret_exprs = ind.calc_log_returns("close", [21, 63, 126])
@@ -48,7 +53,7 @@ class Model1FeatureEngineer:
 
             # --- Category B: Trend Persistence & Quality ---
             vr60 = ind.calc_variance_ratio("close", 1, 5, 60)
-            sharpe63 = ind.calc_rolling_sharpe("ret_1d" if "ret_1d" in df.columns else "ret_21d", 63)
+            sharpe63 = ind.calc_rolling_sharpe("ret_21d", 63)
 
             # --- Category C: Volatility & Breakout Structure ---
             parkinson60 = ind.calc_parkinson_volatility("high", "low", 60)
@@ -58,7 +63,8 @@ class Model1FeatureEngineer:
             df = df.with_columns([dist_ema50, dist_ema200, vr60, sharpe63, parkinson60, dist_52w] + bb_exprs)
 
             # Add symbol column
-            df = df.with_columns(pl.lit(symbol).alias("symbol"))
+            if "symbol" not in df.columns:
+                df = df.with_columns(pl.lit(symbol).alias("symbol"))
 
             return df
 

@@ -21,24 +21,28 @@ class Model2FeatureEngineer:
         self.gold_output_dir = settings.GOLD_DIR / "features_long_term_swing"
         self.gold_output_dir.mkdir(parents=True, exist_ok=True)
 
-    def compute_for_stock(self, symbol: str) -> Optional[pl.DataFrame]:
+    def compute_for_stock(self, symbol: str, df: Optional[pl.DataFrame] = None) -> Optional[pl.DataFrame]:
         """Computes Model 2's 25-feature compounding matrix for a single stock."""
-        stock_file = self.silver_ohlcv_dir / f"{symbol}.parquet"
-        if not stock_file.exists():
-            return None
-
-        try:
-            df = pl.read_parquet(stock_file)
-            if len(df) < 504: # Need at least 2 years of history for multi-year compounding metrics
+        if df is None:
+            stock_file = self.silver_ohlcv_dir / "exchange=NSE" / f"symbol={symbol}" / "data.parquet"
+            if not stock_file.exists():
+                return None
+            try:
+                df = pl.read_parquet(stock_file)
+            except Exception:
                 return None
 
-            df = df.sort("timestamp").with_columns(pl.col("timestamp").dt.date().alias("date"))
+        try:
+            if len(df) < 504:  # Need at least 2 years of history
+                return None
+
+            date_col = "date" if "date" in df.columns else "timestamp"
+            df = df.sort(date_col).with_columns(pl.col(date_col).cast(pl.Date).alias("date_key"))
 
             # --- Category A: Secular Compounding & Quality ---
             ret1d = ind.calc_log_returns("close", [1])[0]
             df = df.with_columns(ret1d)
 
-            # 3-Year Sortino & Max Drawdown (approximated over available history up to 756 bars)
             window_3y = min(len(df), 756)
             sortino = ind.calc_rolling_sortino("ret_1d", window_3y)
             drawdown = ind.calc_rolling_drawdown("close", window_3y)
@@ -55,7 +59,8 @@ class Model2FeatureEngineer:
             df = df.with_columns([sortino, drawdown, sharpe, dist_ath, cagr_3y, calmar_3y])
 
             # Add symbol column
-            df = df.with_columns(pl.lit(symbol).alias("symbol"))
+            if "symbol" not in df.columns:
+                df = df.with_columns(pl.lit(symbol).alias("symbol"))
 
             return df
 
