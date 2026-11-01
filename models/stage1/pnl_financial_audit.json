@@ -1,0 +1,23 @@
+{
+  "model0_weekly_screener": {
+    "total_simulated_trades": 3466,
+    "win_rate_pct": 51.04,
+    "highest_profit_single_trade_pct": 102.05,
+    "highest_loss_single_trade_pct": -49.38,
+    "average_win_pct": 9.01,
+    "average_loss_pct": -6.81,
+    "reward_risk_ratio": 1.32,
+    "profit_factor": 1.39,
+    "total_cumulative_return_2yr_pct": 481.49,
+    "max_portfolio_drawdown_pct": -25.3
+  },
+  "model4_swing_action_with_stoploss": {
+    "total_signals": 26,
+    "win_rate_pct": 50.0,
+    "highest_profit_single_trade_pct": 51.2,
+    "highest_loss_single_trade_pct": -6.0,
+    "average_win_pct": 36.7,
+    "average_loss_pct": -6.0,
+    "profit_factor": 6.12
+  }
+}
