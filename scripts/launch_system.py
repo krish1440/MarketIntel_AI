@@ -245,8 +245,17 @@ class MarketIntelSystem:
                 # 7. MARKET CLOSE SETTLEMENT (15:30 to 16:00 IST)
                 # -------------------------------------------------------------
                 if regime == MarketRegime.MARKET_CLOSE:
-                    logger.info(f"[{time_str} IST] [MARKET CLOSE] Closing bells rung. Persisting daily portfolio state...")
+                    logger.info(f"[{time_str} IST] [MARKET CLOSE] Closing bells rung. Flushing RAM intraday candles to Silver & persisting daily portfolio state...")
                     self.portfolio_mgr._persist_state()
+                    try:
+                        from src.serving.eod_flush_worker import EODFlushWorker
+                        flusher = EODFlushWorker(redis_mgr=self.redis_mgr)
+                        symbols_to_flush = list(self.strategy_runner.orb_highs.keys()) or list(self.portfolio_mgr.positions.keys())
+                        if symbols_to_flush:
+                            flushed_count = flusher.flush_all_symbols(symbols_to_flush)
+                            logger.info(f"[EOD FLUSH] Successfully flushed {flushed_count} live 1-minute candles from RAM into Silver Lakehouse.")
+                    except Exception as e:
+                        logger.warning(f"EOD RAM Flush Notice: {e}")
                     time.sleep(15)
                     continue
 
