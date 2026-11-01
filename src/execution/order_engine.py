@@ -278,3 +278,4 @@ class SimulatedOrderEngine:
             net_pnl_pct=round(net_pnl_pct, 2),
             exit_trigger=exit_trigger
         )
+

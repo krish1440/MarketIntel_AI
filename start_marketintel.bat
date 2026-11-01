@@ -23,3 +23,4 @@ echo Starting MarketIntel Master System Orchestrator...
 python scripts\launch_system.py
 
 pause
+

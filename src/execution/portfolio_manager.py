@@ -225,6 +225,25 @@ class VirtualPortfolioManager:
         except Exception as e:
             logger.error(f"Failed to record order {exec_res.order_id}: {e}")
 
+    def _record_trade_settlement(self, settlement: TradeExitResult):
+        """Records completed trade exit and taxes into trade_history SQLite table."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT OR REPLACE INTO trade_history VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    settlement.trade_id, settlement.symbol, settlement.entry_time.isoformat(),
+                    settlement.exit_time.isoformat(), settlement.holding_days, settlement.quantity,
+                    settlement.entry_price, settlement.exit_price, settlement.gross_pnl,
+                    settlement.gross_pnl_pct, settlement.total_transaction_frictions,
+                    settlement.capital_gains_tax, settlement.tax_type, settlement.net_pnl,
+                    settlement.net_pnl_pct, settlement.exit_trigger
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to record settlement for {settlement.symbol}: {e}")
+
     def calculate_position_size(
         self,
         symbol: str,
@@ -365,12 +384,37 @@ class VirtualPortfolioManager:
                 self._record_order(exec_partial)
                 self.cash += exec_partial.total_cash_impact
 
+                # Record partial settlement to trade history
+                entry_t = datetime.fromisoformat(pos.entry_time)
+                exit_t = datetime.now(timezone.utc)
+                prop_entry_frictions = pos.entry_frictions * (partial_qty / pos.quantity)
+                pos.entry_frictions -= prop_entry_frictions
+
+                partial_settlement = self.order_engine.calculate_trade_close(
+                    trade_id=f"{pos.trade_id}_T1",
+                    symbol=symbol,
+                    entry_time=entry_t,
+                    exit_time=exit_t,
+                    entry_price=pos.entry_price,
+                    exit_price=exec_partial.filled_price,
+                    quantity=partial_qty,
+                    entry_frictions=prop_entry_frictions,
+                    exit_frictions=exec_partial.statutory_charges.total_statutory_charges,
+                    exit_trigger="P75_TARGET_1_PARTIAL_EXIT"
+                )
+                self._record_trade_settlement(partial_settlement)
+
                 # Update position
                 pos.quantity -= partial_qty
                 pos.partial_exit_done = True
                 # Move stop to Entry Price (Guaranteed Risk-Free Breakeven)
                 pos.ml_stop_price = max(pos.ml_stop_price, pos.entry_price)
                 self._persist_state()
+
+        # Dynamic Trailing Stop for Runner (Trails behind price once Target 1 is booked)
+        if pos.partial_exit_done and pos.highest_price_seen > pos.entry_price:
+            trailing_stop_level = round(pos.entry_price + (pos.highest_price_seen - pos.entry_price) * 0.60, 2)
+            pos.ml_stop_price = max(pos.ml_stop_price, trailing_stop_level)
 
         # Check Stop-Loss Hit
         if current_price <= pos.ml_stop_price:
@@ -422,19 +466,7 @@ class VirtualPortfolioManager:
         )
 
         # Record to SQLite history
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO trade_history VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                settlement.trade_id, settlement.symbol, settlement.entry_time.isoformat(),
-                settlement.exit_time.isoformat(), settlement.holding_days, settlement.quantity,
-                settlement.entry_price, settlement.exit_price, settlement.gross_pnl,
-                settlement.gross_pnl_pct, settlement.total_transaction_frictions,
-                settlement.capital_gains_tax, settlement.tax_type, settlement.net_pnl,
-                settlement.net_pnl_pct, settlement.exit_trigger
-            ))
-            conn.commit()
+        self._record_trade_settlement(settlement)
 
         self._persist_state()
         self._check_circuit_breaker()
