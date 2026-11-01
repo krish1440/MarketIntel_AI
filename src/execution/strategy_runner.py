@@ -241,10 +241,9 @@ class AIStrategyRunner:
         p75 = float(self.models["model3"]["p75"].predict(x3)[0])
         p95 = float(self.models["model3"]["p95"].predict(x3)[0])
 
-        # Convert quantile return offsets to price levels if models predict relative returns or price multipliers
-        # Note: If model predicts forward price, use directly; if offset, scale:
-        # Standardize: if p50 < 10.0 and current_price > 50.0, quantile is a fractional return offset
-        if p50 < 10.0 and current_price > 50.0:
+        # Convert quantile return offsets to price levels
+        # Standardize: if p50 < 5.0, quantile is a fractional return offset from current price
+        if abs(p50) < 5.0:
             price_p05 = current_price * (1.0 + p05)
             price_p25 = current_price * (1.0 + p25)
             price_p50 = current_price * (1.0 + p50)
@@ -253,19 +252,36 @@ class AIStrategyRunner:
         else:
             price_p05, price_p25, price_p50, price_p75, price_p95 = p05, p25, p50, p75, p95
 
-        # 2. Model 4 Action & Calibrated Confidence
+        # 2. Model 4 Action & Calibrated Directional Confidence
         x4 = np.array([[features_dict.get(k, 0.0) for k in m4_feats]], dtype=np.float32)
         probs = self.models["model4"].predict_proba(x4)[0]
         # Class indices: 0: STRONG_SELL, 1: SELL, 2: HOLD, 3: BUY, 4: STRONG_BUY
-        classes = ["STRONG_SELL", "SELL", "HOLD", "BUY", "STRONG_BUY"]
-        pred_idx = int(np.argmax(probs))
-        action = classes[pred_idx]
-        confidence = float(probs[pred_idx])
+        p_bear = float(probs[0] + probs[1])
+        p_hold = float(probs[2])
+        p_bull = float(probs[3] + probs[4])
+        dir_sum = p_bull + p_bear
+        bullish_ratio = p_bull / max(dir_sum, 1e-6)
+
+        if bullish_ratio >= 0.65 and p_bull >= 0.28:
+            action = "STRONG_BUY"
+            confidence = bullish_ratio
+        elif bullish_ratio >= 0.55 and p_bull >= 0.25:
+            action = "BUY"
+            confidence = bullish_ratio
+        elif bullish_ratio <= 0.35 and p_bear >= 0.28:
+            action = "STRONG_SELL"
+            confidence = 1.0 - bullish_ratio
+        elif bullish_ratio <= 0.45 and p_bear >= 0.25:
+            action = "SELL"
+            confidence = 1.0 - bullish_ratio
+        else:
+            action = "HOLD"
+            confidence = p_hold
 
         # 3. Model 1 Momentum Runner Target (Q90)
         x1 = np.array([[features_dict.get(k, 0.0) for k in m1_feats]], dtype=np.float32)
         q90_raw = float(self.models["model1"]["q90"].predict(x1)[0])
-        target_2 = current_price * (1.0 + q90_raw) if q90_raw < 10.0 and current_price > 50.0 else q90_raw
+        target_2 = current_price * (1.0 + q90_raw) if abs(q90_raw) < 5.0 else q90_raw
 
         # 4. Corridor Valuation Gate Check
         # Rule: Current price must not be overbought/exhausted (must be < P95).

@@ -351,7 +351,7 @@ class VirtualPortfolioManager:
         )
         return pos
 
-    def update_market_price(self, symbol: str, current_price: float) -> Optional[TradeExitResult]:
+    def update_market_price(self, symbol: str, current_price: float, exit_time: Optional[datetime] = None) -> Optional[TradeExitResult]:
         """
         Updates live tick price for an open position and evaluates dynamic exits:
           - Stop-Loss Hit (Model 3 P05 Floor)
@@ -366,6 +366,8 @@ class VirtualPortfolioManager:
         pos.highest_price_seen = max(pos.highest_price_seen, current_price)
         pos.unrealized_pnl = (current_price - pos.entry_price) * pos.quantity
         pos.unrealized_pnl_pct = ((current_price / pos.entry_price) - 1.0) * 100.0
+
+        exit_t = exit_time or datetime.now(timezone.utc)
 
         # Check Target 1 (Book 50% Profit)
         if not pos.partial_exit_done and current_price >= pos.ml_target_1:
@@ -386,7 +388,6 @@ class VirtualPortfolioManager:
 
                 # Record partial settlement to trade history
                 entry_t = datetime.fromisoformat(pos.entry_time)
-                exit_t = datetime.now(timezone.utc)
                 prop_entry_frictions = pos.entry_frictions * (partial_qty / pos.quantity)
                 pos.entry_frictions -= prop_entry_frictions
 
@@ -420,16 +421,22 @@ class VirtualPortfolioManager:
         if current_price <= pos.ml_stop_price:
             trigger = "BREAKEVEN_STOP_HIT" if pos.partial_exit_done else "P05_STOP_LOSS_HIT"
             logger.warning(f"STOP HIT for {symbol} ({trigger}) at Rs.{current_price:.2f} (Stop was Rs.{pos.ml_stop_price:.2f})!")
-            return self.close_position(symbol, current_price, exit_trigger=trigger)
+            return self.close_position(symbol, current_price, exit_trigger=trigger, exit_time=exit_t)
 
         # Check Target 2 (Runner Target / Q90)
         if pos.partial_exit_done and current_price >= pos.ml_target_2:
             logger.info(f"RUNNER TARGET 2 HIT for {symbol} (Model 1 Q90) at Rs.{current_price:.2f}!")
-            return self.close_position(symbol, current_price, exit_trigger="Q90_RUNNER_TARGET_HIT")
+            return self.close_position(symbol, current_price, exit_trigger="Q90_RUNNER_TARGET_HIT", exit_time=exit_t)
 
         return None
 
-    def close_position(self, symbol: str, current_price: float, exit_trigger: str = "MANUAL_EXIT") -> Optional[TradeExitResult]:
+    def close_position(
+        self, 
+        symbol: str, 
+        current_price: float, 
+        exit_trigger: str = "MANUAL_EXIT",
+        exit_time: Optional[datetime] = None
+    ) -> Optional[TradeExitResult]:
         """Closes an open paper trade and records settlement into trade_history."""
         pos = self.positions.pop(symbol, None)
         if not pos:
@@ -450,13 +457,13 @@ class VirtualPortfolioManager:
 
         # Calculate final settlement with STCG/LTCG
         entry_time = datetime.fromisoformat(pos.entry_time)
-        exit_time = datetime.now(timezone.utc)
+        actual_exit_time = exit_time or datetime.now(timezone.utc)
 
         settlement = self.order_engine.calculate_trade_close(
             trade_id=pos.trade_id,
             symbol=symbol,
             entry_time=entry_time,
-            exit_time=exit_time,
+            exit_time=actual_exit_time,
             entry_price=pos.entry_price,
             exit_price=execution.filled_price,
             quantity=pos.quantity,
