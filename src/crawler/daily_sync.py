@@ -40,10 +40,27 @@ class DailySyncer:
             last_date = existing_df["date"].max()
             last_date_str = str(last_date)[:10]
 
-            # Fetch recent 5 days to capture any new daily bars
+            # Dynamically calculate missing calendar days to prevent any gap
+            today = date.today()
+            if hasattr(last_date, "date"):
+                last_d = last_date.date()
+            elif isinstance(last_date, date):
+                last_d = last_date
+            else:
+                last_d = datetime.strptime(last_date_str, "%Y-%m-%d").date()
+
+            days_missing = (today - last_d).days
+            if days_missing <= 0:
+                return (symbol, True, 0, "ALREADY_UP_TO_DATE")
+
+            # Dynamically request missing days (e.g. 5d, 10d, or date range)
             ticker_str = f"{symbol}{self.suffix}"
             ticker = yf.Ticker(ticker_str)
-            recent_hist = ticker.history(period="5d", auto_adjust=True)
+            if days_missing > 30:
+                recent_hist = ticker.history(start=last_d.strftime("%Y-%m-%d"), auto_adjust=True)
+            else:
+                fetch_period = f"{max(5, days_missing + 3)}d"
+                recent_hist = ticker.history(period=fetch_period, auto_adjust=True)
 
             if recent_hist.empty:
                 return (symbol, True, 0, "ALREADY_UP_TO_DATE")
