@@ -245,6 +245,16 @@ The AI system is structured into two specialized, decoupled model pipelines:
 
 ---
 
+### 3.7 Single-Click Master Production Launcher (`start_marketintel.bat` & `scripts/launch_system.py`)
+
+A production orchestrator enabling complete, zero-friction local platform startup:
+1. **Service Auto-Discovery**: Checks if Redis is running; if not, attempts Docker/service startup with zero-cost fallback to built-in in-memory bus.
+2. **Pre-Flight System Check**: Verifies Angel One SmartAPI credentials and lakehouse parquet integrity.
+3. **Microservices Boot**: Simultaneously launches FastAPI backend, WebSocket bus, AI inference engines, and Paper Trading simulator.
+4. **Browser Auto-Launch**: Automatically opens the user's default browser directly to the interactive TradingView Dashboard.
+
+---
+
 ## 4. Phase-by-Phase Implementation Roadmap
 
 ```mermaid

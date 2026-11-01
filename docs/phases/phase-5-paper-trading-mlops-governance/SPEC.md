@@ -17,6 +17,13 @@
   - **Delta-Only Ingestion**: Only the new 5 days of Gold features are processed; historical partitions remain frozen.
   - **Warm Retraining**: LightGBM `init_model` starts from the existing Champion weights, learning new residual trees in seconds.
   - **Validation Gate**: Both models backtested on out-of-sample data. Challenger is promoted to Champion only if it beats the baseline on Sharpe ratio, win rate, and drawdown.
+- **Single-Click Production Master Startup Orchestrator (`start_marketintel.bat` & `scripts/launch_system.py`)**:
+  - One-click launcher that boots the entire platform from zero to fully running:
+    1. Checks & auto-starts Redis (Docker/service) or activates built-in in-memory bus.
+    2. Runs pre-flight system integrity & credential health check against Angel One.
+    3. Boots FastAPI Serving & WebSocket real-time bus (`localhost:8000`).
+    4. Boots the Paper Trading & Risk Governance engine.
+    5. Automatically opens default browser to the Live TradingView Terminal (`localhost:8000` / `localhost:3000`).
 
 ## 2. Technical Contracts & Schemas
 
