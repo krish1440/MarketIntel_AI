@@ -1,0 +1,151 @@
+{
+  "refit_timestamp": "2026-11-01 17:29:55",
+  "protocol": "Stage 2 Full-History Refit (100% Data)",
+  "models": {
+    "model0": {
+      "artifact": "model0_screener.txt",
+      "features": [
+        "ret_1d",
+        "ret_3d",
+        "ret_5d",
+        "ret_21d",
+        "ema_20",
+        "ema_200",
+        "atr_14",
+        "atr_5",
+        "atr_20",
+        "rsi_14",
+        "adx_14",
+        "dist_ema20_atr",
+        "dist_ema200_atr",
+        "atr_ratio_5_20",
+        "parkinson_vol_10d",
+        "dist_52w_high_pct",
+        "rvol_20",
+        "volume_trend_5_20",
+        "bb_upper",
+        "bb_middle",
+        "bb_lower",
+        "bb_squeeze_pct",
+        "turnover_20d_avg",
+        "sp500_overnight_ret",
+        "nasdaq_overnight_ret",
+        "crude_oil_ret_3d",
+        "usdinr_ret_1d",
+        "us_10y_yield_delta",
+        "india_vix_zscore_20d",
+        "nifty_ret_5d",
+        "fii_flow_5d_norm",
+        "rs_vs_nifty_5d"
+      ],
+      "total_samples": 582400,
+      "groups": 5954
+    },
+    "model4": {
+      "artifact": "model4_classifier.joblib",
+      "features": [
+        "ret_1d",
+        "ret_5d",
+        "ret_21d",
+        "ema_20",
+        "ema_50",
+        "ema_200",
+        "atr_14",
+        "atr_5",
+        "atr_20",
+        "adx_14",
+        "rsi_14",
+        "trend_alignment_score",
+        "dist_ema20_atr",
+        "dist_ema50_atr",
+        "dist_ema200_atr",
+        "rvol_20",
+        "volume_trend_5_20",
+        "atr_ratio_5_20",
+        "dist_52w_high_pct",
+        "dist_52w_low_pct",
+        "bb_upper",
+        "bb_middle",
+        "bb_lower",
+        "bb_squeeze_pct",
+        "bb_percent_b"
+      ],
+      "total_samples": 906730,
+      "classes": [
+        "STRONG_SELL",
+        "SELL",
+        "HOLD",
+        "BUY",
+        "STRONG_BUY"
+      ]
+    },
+    "model1": {
+      "artifacts": {
+        "q10": "model1_swing_q10.txt",
+        "q50": "model1_swing_q50.txt",
+        "q90": "model1_swing_q90.txt"
+      },
+      "features": [
+        "ret_21d",
+        "ret_63d",
+        "ret_126d",
+        "ema_50",
+        "ema_200",
+        "atr_20",
+        "adx_14",
+        "dist_ema50_atr",
+        "dist_ema200_atr",
+        "variance_ratio_60d",
+        "sharpe_ratio_63d",
+        "parkinson_vol_60d",
+        "dist_52w_high_pct",
+        "bb_upper",
+        "bb_middle",
+        "bb_lower",
+        "bb_squeeze_pct"
+      ],
+      "total_samples": 894402
+    },
+    "model2": {
+      "artifact": "model2_compounding.txt",
+      "features": [
+        "ret_1d",
+        "sortino_ratio_756d",
+        "max_drawdown_756d",
+        "sharpe_ratio_756d",
+        "dist_ath_pct",
+        "cagr_3y_proxy",
+        "calmar_ratio_3y"
+      ],
+      "total_samples": 797176
+    },
+    "model3": {
+      "artifacts": {
+        "p05": "model3_corridor_p05.txt",
+        "p25": "model3_corridor_p25.txt",
+        "p50": "model3_corridor_p50.txt",
+        "p75": "model3_corridor_p75.txt",
+        "p95": "model3_corridor_p95.txt"
+      },
+      "features": [
+        "parkinson_vol_20d",
+        "garman_klass_vol_20d",
+        "atr_14",
+        "sma_50",
+        "atr_cone_21d",
+        "atr_cone_63d",
+        "atr_cone_252d",
+        "zscore_from_sma50",
+        "kc_upper",
+        "kc_middle",
+        "kc_lower",
+        "keltner_spread",
+        "bb_upper",
+        "bb_middle",
+        "bb_lower",
+        "bb_squeeze_pct"
+      ],
+      "total_samples": 934679
+    }
+  }
+}

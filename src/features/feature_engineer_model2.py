@@ -44,9 +44,9 @@ class Model2FeatureEngineer:
             df = df.with_columns(ret1d)
 
             window_3y = min(len(df), 756)
-            sortino = ind.calc_rolling_sortino("ret_1d", window_3y)
-            drawdown = ind.calc_rolling_drawdown("close", window_3y)
-            sharpe = ind.calc_rolling_sharpe("ret_1d", window_3y)
+            sortino = ind.calc_rolling_sortino("ret_1d", window_3y).alias("sortino_ratio_756d")
+            drawdown = ind.calc_rolling_drawdown("close", window_3y).alias("max_drawdown_756d")
+            sharpe = ind.calc_rolling_sharpe("ret_1d", window_3y).alias("sharpe_ratio_756d")
 
             # Distance to All-Time High
             ath = pl.col("high").cum_max()

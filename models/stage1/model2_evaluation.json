@@ -1,0 +1,17 @@
+{
+  "model": "Model 2 (Wealth Compounding Engine > 1Y)",
+  "test_vault_rmse": 0.4497,
+  "test_vault_r2": -0.3572,
+  "spearman_rank_correlation": 0.076,
+  "top_quartile_1y_return_pct": -8.31,
+  "compounding_alpha_spread_pct": 0.56,
+  "top_features": [
+    "dist_ath_pct",
+    "cagr_3y_proxy",
+    "max_drawdown_756d",
+    "sharpe_ratio_756d",
+    "sortino_ratio_756d",
+    "calmar_ratio_3y",
+    "ret_1d"
+  ]
+}

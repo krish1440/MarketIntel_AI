@@ -1,0 +1,85 @@
+{
+  "model0": {
+    "model": "Model 0 (Pre-Market Screener & LambdaMART Ranker)",
+    "test_vault_ndcg@5": 0.4438,
+    "test_vault_ndcg@10": 0.4212,
+    "test_vault_ndcg@20": 0.4094,
+    "mean_5d_alpha_spread_pct": 0.51,
+    "annualized_top_decile_alpha_pct": 25.32,
+    "top_10_features_by_gain": [
+      "turnover_20d_avg",
+      "volume_trend_5_20",
+      "dist_ema200_atr",
+      "dist_52w_high_pct",
+      "atr_ratio_5_20",
+      "ema_200",
+      "adx_14",
+      "ret_21d",
+      "parkinson_vol_10d",
+      "dist_ema20_atr"
+    ]
+  },
+  "model4": {
+    "model": "Model 4 (Stock Action & Confidence Classifier)",
+    "test_vault_accuracy": 0.3773,
+    "test_vault_balanced_accuracy": 0.2231,
+    "test_vault_log_loss": 1.4969,
+    "high_confidence_accuracy": 0.7956,
+    "high_confidence_signal_share_pct": 0.21,
+    "top_10_features_by_importance": [
+      "dist_52w_low_pct",
+      "dist_52w_high_pct",
+      "adx_14",
+      "dist_ema200_atr",
+      "bb_squeeze_pct",
+      "atr_ratio_5_20",
+      "ema_200",
+      "ret_21d",
+      "dist_ema50_atr",
+      "volume_trend_5_20"
+    ]
+  },
+  "model1": {
+    "q10_pinball_loss": 0.03565,
+    "q10_empirical_coverage": 0.102,
+    "q50_pinball_loss": 0.0804,
+    "q50_empirical_coverage": 0.5803,
+    "q90_pinball_loss": 0.04005,
+    "q90_empirical_coverage": 0.9261,
+    "model": "Model 1 (Positional Swing Alpha Engine)",
+    "active_signals_annualized_sharpe": -0.01,
+    "active_signals_win_rate_pct": 45.56
+  },
+  "model2": {
+    "model": "Model 2 (Wealth Compounding Engine > 1Y)",
+    "test_vault_rmse": 0.4497,
+    "test_vault_r2": -0.3572,
+    "spearman_rank_correlation": 0.076,
+    "top_quartile_1y_return_pct": -8.31,
+    "compounding_alpha_spread_pct": 0.56,
+    "top_features": [
+      "dist_ath_pct",
+      "cagr_3y_proxy",
+      "max_drawdown_756d",
+      "sharpe_ratio_756d",
+      "sortino_ratio_756d",
+      "calmar_ratio_3y",
+      "ret_1d"
+    ]
+  },
+  "model3": {
+    "p05_pinball_loss": 0.01291,
+    "p05_empirical_coverage": 0.0439,
+    "p25_pinball_loss": 0.03544,
+    "p25_empirical_coverage": 0.2839,
+    "p50_pinball_loss": 0.04553,
+    "p50_empirical_coverage": 0.5686,
+    "p75_pinball_loss": 0.03937,
+    "p75_empirical_coverage": 0.7995,
+    "p95_pinball_loss": 0.01494,
+    "p95_empirical_coverage": 0.9577,
+    "model": "Model 3 (Probabilistic Price Corridor Forecaster)",
+    "nominal_90_band_coverage_pct": 91.38
+  },
+  "audit_duration_seconds": 84.04
+}

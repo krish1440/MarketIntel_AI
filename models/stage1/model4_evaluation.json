@@ -1,0 +1,20 @@
+{
+  "model": "Model 4 (Stock Action & Confidence Classifier)",
+  "test_vault_accuracy": 0.3773,
+  "test_vault_balanced_accuracy": 0.2231,
+  "test_vault_log_loss": 1.4969,
+  "high_confidence_accuracy": 0.7956,
+  "high_confidence_signal_share_pct": 0.21,
+  "top_10_features_by_importance": [
+    "dist_52w_low_pct",
+    "dist_52w_high_pct",
+    "adx_14",
+    "dist_ema200_atr",
+    "bb_squeeze_pct",
+    "atr_ratio_5_20",
+    "ema_200",
+    "ret_21d",
+    "dist_ema50_atr",
+    "volume_trend_5_20"
+  ]
+}

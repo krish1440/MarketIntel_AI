@@ -1,0 +1,11 @@
+{
+  "q10_pinball_loss": 0.03565,
+  "q10_empirical_coverage": 0.102,
+  "q50_pinball_loss": 0.0804,
+  "q50_empirical_coverage": 0.5803,
+  "q90_pinball_loss": 0.04005,
+  "q90_empirical_coverage": 0.9261,
+  "model": "Model 1 (Positional Swing Alpha Engine)",
+  "active_signals_annualized_sharpe": -0.01,
+  "active_signals_win_rate_pct": 45.56
+}

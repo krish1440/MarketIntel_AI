@@ -1,0 +1,14 @@
+{
+  "p05_pinball_loss": 0.01291,
+  "p05_empirical_coverage": 0.0439,
+  "p25_pinball_loss": 0.03544,
+  "p25_empirical_coverage": 0.2839,
+  "p50_pinball_loss": 0.04553,
+  "p50_empirical_coverage": 0.5686,
+  "p75_pinball_loss": 0.03937,
+  "p75_empirical_coverage": 0.7995,
+  "p95_pinball_loss": 0.01494,
+  "p95_empirical_coverage": 0.9577,
+  "model": "Model 3 (Probabilistic Price Corridor Forecaster)",
+  "nominal_90_band_coverage_pct": 91.38
+}

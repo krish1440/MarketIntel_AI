@@ -1,0 +1,20 @@
+{
+  "model": "Model 0 (Pre-Market Screener & LambdaMART Ranker)",
+  "test_vault_ndcg@5": 0.4438,
+  "test_vault_ndcg@10": 0.4212,
+  "test_vault_ndcg@20": 0.4094,
+  "mean_5d_alpha_spread_pct": 0.51,
+  "annualized_top_decile_alpha_pct": 25.32,
+  "top_10_features_by_gain": [
+    "turnover_20d_avg",
+    "volume_trend_5_20",
+    "dist_ema200_atr",
+    "dist_52w_high_pct",
+    "atr_ratio_5_20",
+    "ema_200",
+    "adx_14",
+    "ret_21d",
+    "parkinson_vol_10d",
+    "dist_ema20_atr"
+  ]
+}
