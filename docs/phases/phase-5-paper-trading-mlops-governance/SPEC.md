@@ -1,79 +1,151 @@
-# Phase 5: Autonomous Paper Trading & MLOps Champion/Challenger Governance
+# Phase 5: Autonomous Paper Trading, Multi-Tier AI Execution & MLOps Governance
 
 ## 1. Objectives & Scope
-- **Autonomous Paper Trading Simulator**:
-  - Virtual order matching engine with realistic execution mechanics:
-    - Estimated slippage model (0.05% on market orders).
-    - Indian statutory transaction costs: STT (Securities Transaction Tax), Exchange Transaction Charges, SEBI turnover fees, Stamp Duty, and GST.
-  - Active position manager with automated stop-loss tracking and partial profit exits (+1.5R).
-- **Real-Time Trade Ledger & Performance Analytics**:
-  - Maintains persistent order book, trade journal, and equity curve.
-  - Key institutional metrics:
-    - **Sharpe Ratio** & **Sortino Ratio**
-    - **Maximum Drawdown (MDD)**
-    - **Win Rate (%)** and **Profit Factor ($\frac{\text{Gross Profit}}{\text{Gross Loss}}$)**
-- **Champion vs. Challenger MLOps Governance**:
-  - Scheduled weekly execution: **Every Saturday at 02:00 AM IST**.
-  - **Delta-Only Ingestion**: Only the new 5 days of Gold features are processed; historical partitions remain frozen.
-  - **Warm Retraining**: LightGBM `init_model` starts from the existing Champion weights, learning new residual trees in seconds.
-  - **Validation Gate**: Both models backtested on out-of-sample data. Challenger is promoted to Champion only if it beats the baseline on Sharpe ratio, win rate, and drawdown.
-- **Single-Click Production Master Startup Orchestrator (`start_marketintel.bat` & `scripts/launch_system.py`)**:
-  - One-click launcher that boots the entire platform from zero to fully running:
-    1. Checks & auto-starts Redis (Docker/service) or activates built-in in-memory bus.
-    2. Runs pre-flight system integrity & credential health check against Angel One.
-    3. Boots FastAPI Serving & WebSocket real-time bus (`localhost:8000`).
-    4. Boots the Paper Trading & Risk Governance engine.
-    5. Automatically opens default browser to the Live TradingView Terminal (`localhost:8000` / `localhost:3000`).
 
-## 2. Technical Contracts & Schemas
+Phase 5 bridges the verified AI models (from Phase 4) and streaming ingestion (from Phase 3) into an **Autonomous Paper Trading Execution & Portfolio Management System**.
 
-### Trade Journal Schema:
+### Core Pillars:
+1. **Multi-Tier AI Execution Funnel**:
+   * Combines Models 0, 3, 4, and 1 into a cohesive institutional entry pipeline.
+   * Eliminates premature or bad entries — filters out stocks that have already overextended or lack institutional volume.
+2. **ML-Driven Dynamic Risk Architecture**:
+   * **Stops**: Dynamic calculation via **Model 3 $P_{05}$ Quantile Crash Floor**, clamped by a hard institutional risk ceiling (maximum -6.0%).
+   * **Targets**: **Target 1** at **Model 3 $P_{75}$ Upper Resistance** (book 50% profit); **Target 2 (Runner)** trailed via **Model 1 $Q_{90}$ Momentum Envelope**.
+   * **Position Sizing**: Mathematically sized to risk exactly 1% (₹10,000) of portfolio based on the distance between Entry Price and ML Stop Price.
+3. **Institutional Execution Simulation**:
+   * Simulated execution matching against real 1-minute and 5-minute ticks.
+   * Realistic execution mechanics:
+     * Bid-Ask slippage modeling (0.05% on market orders).
+     * Complete Indian statutory costs: Securities Transaction Tax (STT), Exchange Turnover Charges, SEBI fees, Stamp Duty, and 18% GST.
+4. **Virtual Portfolio & Risk Governance**:
+   * Initial capital: **₹10,00,000 virtual INR** (Strictly paper trading; `EXECUTION_MODE="PAPER"`).
+   * Maximum 5% capital per position (₹50,000).
+   * Maximum 10 concurrent open positions.
+   * Portfolio Circuit Breaker: Automated halt if cumulative daily drawdown touches **-3.0%**.
+5. **Single-Click Master Startup Orchestrator (`start_marketintel.bat` & `scripts/launch_system.py`)**:
+   * Boots the entire platform with 1 single click:
+     1. Redis auto-detection (falls back to high-speed in-memory broker in <1ms).
+     2. Pre-flight API and lakehouse integrity check.
+     3. Active model registry verification from `models/active/`.
+     4. Real-time tick & candle streaming service.
+     5. Paper Trading Execution Engine & Portfolio Manager.
+     6. Automated browser launch to the Terminal Dashboard.
+
+---
+
+## 2. Multi-Tier AI Execution Funnel Architecture
+
+```mermaid
+flowchart TD
+    A["09:08 AM: Pre-Market Screener (Model 0)"] -->|Ranks 2,000+ stocks down to| B["Top 20 Focus Watchlist"]
+    
+    B --> C["09:15–09:30 AM: Price Corridor Valuation Check (Model 3)"]
+    C -->|Price at or above P95 Ceiling?| REJ1["DISQUALIFIED: Overextended (Negative Expectancy)"]
+    C -->|Price in Fair Value Zone P25 to P50| D["09:30 AM: Action & Confidence Confirmation (Model 4)"]
+    
+    D -->|Confidence < 65% or HOLD/SELL| REJ2["DISQUALIFIED: Insufficient Conviction"]
+    D -->|STRONG_BUY with Confidence >= 65%| E["Intraday Trigger Engine"]
+    
+    E -->|ORB 15m Breakout + Price > VWAP + RVOL > 1.2| F["EXECUTE PAPER ORDER: Entry Locked"]
+    
+    F --> G["Dynamic ML Stops: P05 Floor (Capped at -6%)"]
+    F --> H["Dynamic ML Targets: P75 Resistance (+10% Book 50%) & Trail Q90"]
+```
+
+### Detailed Filter Specifications:
+* **Tier 1 (Pre-Market 09:08 AM) — Model 0**:
+  * Ingests overnight global assets (S&P 500, Nasdaq, Crude, USD/INR, 10Y Yield, India VIX, FII flows).
+  * LambdaMART ranker outputs Top 20 actionable long candidates for the trading session.
+* **Tier 2 (Market Open 09:15–09:30 AM) — Model 3 Corridor Filter**:
+  * Evaluates current market price relative to Model 3's volatility cones.
+  * Disqualifies stocks opening gap-up at $P_{95}$ exhaustion ceiling ($>2 \times ATR_{14}$ stretch).
+  * Passes only stocks trading within the $P_{25} \rightarrow P_{50}$ value corridor.
+* **Tier 3 (09:30 AM Confirmation) — Model 4 Action Classifier**:
+  * Evaluates EMA stack (20 > 50 > 200), Wilder RSI, ADX, and RVOL.
+  * Approves only stocks classified as **`STRONG_BUY`** or **`BUY`** with **Platt-scaled Confidence $\ge 65\%$**.
+* **Tier 4 (Execution Trigger) — Intraday Real-Time Math**:
+  * **Opening Range Breakout (ORB 15m)**: Price crosses above the high of the first 15-minute candle.
+  * **VWAP Bias**: Current price must trade strictly above Volume-Weighted Average Price.
+  * **Institutional Surge**: Relative volume ($RVOL_{20} > 1.2$).
+* **Tier 5 (Position & Risk Sizing)**:
+  * **Stop-Loss**: $\text{Stop Price} = \max(\text{Model 3 } P_{05} \text{ Floor},\; \text{Entry} \times 0.94)$.
+  * **Quantity**: $\text{Shares} = \lfloor \frac{₹10,000}{\text{Entry} - \text{Stop Price}} \rfloor$, capped at ₹50,000 total capital.
+  * **Target 1**: Model 3 $P_{75}$ upper resistance band (sell 50% shares, move stop to breakeven).
+  * **Target 2**: Model 1 $Q_{90}$ momentum ceiling (trail remainder with 20 EMA).
+
+---
+
+## 3. Database & Ledger Schemas
+
+### A. Persistent Paper Orders Table:
 ```sql
-CREATE TABLE paper_trades (
-    trade_id UUID PRIMARY KEY,
+CREATE TABLE paper_orders (
+    order_id UUID PRIMARY KEY,
     symbol VARCHAR(30) NOT NULL,
-    direction VARCHAR(5) NOT NULL, -- BUY or SELL
-    entry_time TIMESTAMPTZ NOT NULL,
-    entry_price REAL NOT NULL,
-    initial_sl REAL NOT NULL,
-    target_1 REAL NOT NULL,
-    target_2 REAL,
+    direction VARCHAR(5) NOT NULL, -- BUY
+    order_type VARCHAR(10) NOT NULL, -- MARKET, LIMIT, STOP_LOSS
+    trigger_reason VARCHAR(50) NOT NULL, -- ORB_VWAP_BREAKOUT, P05_STOP_HIT, P75_TARGET_HIT
+    requested_price REAL NOT NULL,
+    filled_price REAL NOT NULL,
+    slippage_pct REAL DEFAULT 0.05,
     quantity INT NOT NULL,
-    allocated_capital REAL NOT NULL,
-    exit_time_part1 TIMESTAMPTZ,
-    exit_price_part1 REAL,
-    exit_time_part2 TIMESTAMPTZ,
-    exit_price_part2 REAL,
-    slippage_cost REAL DEFAULT 0,
-    statutory_taxes REAL DEFAULT 0,
-    net_pnl REAL,
-    net_pnl_pct REAL,
-    exit_reason VARCHAR(50), -- TARGET_1_HIT, TRAILING_SL_HIT, STOP_LOSS_HIT
-    status VARCHAR(20) DEFAULT 'OPEN' -- OPEN, PARTIAL_CLOSED, CLOSED
+    order_time TIMESTAMPTZ NOT NULL,
+    status VARCHAR(20) DEFAULT 'FILLED' -- FILLED, REJECTED, CANCELLED
 );
 ```
 
-### MLOps Evaluation Report Schema:
-```json
-{
-  "evaluation_date": "2024-11-02T02:30:00+05:30",
-  "champion_id": "model_v2.1",
-  "challenger_id": "model_v2.2_candidate",
-  "test_window": "2024-10-28 to 2024-11-01",
-  "metrics": {
-    "champion": {"sharpe": 1.84, "win_rate": 0.61, "max_drawdown": 0.042, "profit_factor": 1.95},
-    "challenger": {"sharpe": 2.10, "win_rate": 0.64, "max_drawdown": 0.038, "profit_factor": 2.21}
-  },
-  "gate_decision": "PROMOTE",
-  "promoted_to_champion": true,
-  "reason": "Challenger achieved superior Sharpe (+0.26) and lower Drawdown (-0.4%) with positive expectancy."
-}
+### B. Persistent Paper Trade Positions & Journal:
+```sql
+CREATE TABLE paper_positions (
+    trade_id UUID PRIMARY KEY,
+    symbol VARCHAR(30) NOT NULL,
+    entry_time TIMESTAMPTZ NOT NULL,
+    entry_price REAL NOT NULL,
+    quantity_initial INT NOT NULL,
+    quantity_open INT NOT NULL,
+    ml_stop_price REAL NOT NULL,      -- Model 3 P05 Floor
+    ml_target_1 REAL NOT NULL,        -- Model 3 P75 Resistance
+    ml_target_2 REAL,                 -- Model 1 Q90 Ceiling
+    allocated_capital REAL NOT NULL,  -- Max ₹50,000
+    risk_capital REAL NOT NULL,       -- Max ₹10,000
+    current_market_price REAL NOT NULL,
+    unrealized_pnl REAL NOT NULL,
+    unrealized_pnl_pct REAL NOT NULL,
+    status VARCHAR(20) DEFAULT 'OPEN' -- OPEN, PARTIAL_EXIT, CLOSED
+);
+
+CREATE TABLE paper_trade_ledger (
+    trade_id UUID PRIMARY KEY,
+    symbol VARCHAR(30) NOT NULL,
+    entry_time TIMESTAMPTZ NOT NULL,
+    entry_price REAL NOT NULL,
+    exit_time TIMESTAMPTZ NOT NULL,
+    exit_price REAL NOT NULL,
+    quantity INT NOT NULL,
+    holding_period_days INT NOT NULL,
+    gross_pnl REAL NOT NULL,
+    slippage_cost REAL NOT NULL,
+    statutory_taxes REAL NOT NULL, -- STT + Exchange + SEBI + Stamp + GST
+    net_pnl REAL NOT NULL,
+    net_pnl_pct REAL NOT NULL,
+    exit_trigger VARCHAR(50) NOT NULL -- TARGET_1, TRAILING_STOP, HARD_STOP, DAILY_HALT
+);
 ```
 
-## 3. Implementation Steps & Milestones
-- [ ] Step 5.1: Build Virtual Order Execution Engine with slippage and tax calculations.
-- [ ] Step 5.2: Implement Trade Journal database table and portfolio equity tracker.
-- [ ] Step 5.3: Build performance analytics calculator (Sharpe, Sortino, Drawdown, Profit Factor).
-- [ ] Step 5.4: Implement delta feature fetcher and LightGBM warm-start incremental retrainer.
-- [ ] Step 5.5: Implement automated Champion vs Challenger backtest validation gate.
+---
 
+## 4. Implementation Steps & Milestones
+
+* [ ] **Step 5.1: Virtual Order & Tax Calculation Engine (`src/execution/order_engine.py`)**
+  * Realistic order fills with 0.05% slippage simulation.
+  * Vectorized statutory tax calculator (STT, Exchange turnover, SEBI, Stamp duty, GST).
+* [ ] **Step 5.2: Virtual Portfolio & Risk Manager (`src/execution/portfolio_manager.py`)**
+  * ₹10,00,000 capital tracker, margin manager, position book, and cash ledger.
+  * 1% risk per trade formula and 5% max position allocation limits.
+* [ ] **Step 5.3: Multi-Tier AI Strategy Runner (`src/execution/strategy_runner.py`)**
+  * Integrates Model 0 Watchlist $\rightarrow$ Model 3 Corridor Filter $\rightarrow$ Model 4 Confidence Check $\rightarrow$ 1-minute VWAP/ORB Breakout Trigger.
+  * Real-time position monitor for dynamic stop-loss adjustments and target profit-taking.
+* [ ] **Step 5.4: Champion vs. Challenger MLOps Governance (`src/mlops/champion_governance.py`)**
+  * Weekly Saturday evaluation gate between existing Champion and new Challenger retrained models.
+* [ ] **Step 5.5: Single-Click Master Orchestrator (`start_marketintel.bat` & `scripts/launch_system.py`)**
+  * Master boot script that starts Redis/In-Memory bus, background workers, AI inference, and paper execution with one click.
