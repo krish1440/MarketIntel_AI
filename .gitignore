@@ -35,7 +35,10 @@ data/
 *.csv
 *.zip
 
-# IDE & OS
+# Models & Runtime Archives
+models/archive/
+*.db
+*.sqlite3
 logs/
 *.log
 .vscode/

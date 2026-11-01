@@ -39,7 +39,8 @@
         "rs_vs_nifty_5d"
       ],
       "total_samples": 582400,
-      "groups": 5954
+      "groups": 5954,
+      "refit_tournament_timestamp": "2026-11-01T17:18:11.761923+00:00"
     },
     "model4": {
       "artifact": "model4_classifier.joblib",
