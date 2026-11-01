@@ -1,0 +1,448 @@
+{
+  "audit_metadata": {
+    "strategy_name": "MarketIntel Institutional Multi-Tier AI Strategy",
+    "audit_period": "January 1, 2024 - July 31, 2026 (635 Trading Sessions)",
+    "model_version": "Isolated Validation Models (Zero Lookahead, 63d Purged Embargo)",
+    "execution_mode": "Zero-Shortcut Real Day-by-Day Price Simulation",
+    "generated_at": "2026-11-01T20:34:10.803931+00:00"
+  },
+  "financial_summary": {
+    "initial_capital_inr": 1000000.0,
+    "ending_cash_balance_inr": 1616189.55,
+    "gross_realized_profit_inr": 686106.82,
+    "gross_return_pct": 68.61,
+    "statutory_indian_frictions_inr": 69972.65,
+    "taxable_capital_gain_inr": 616134.17,
+    "stcg_tax_paid_inr": 123226.83,
+    "take_home_net_cash_profit_inr": 492907.34,
+    "net_return_on_capital_pct": 49.29,
+    "annualized_cagr_net_pct": 22.2,
+    "max_portfolio_drawdown_pct": -9.52,
+    "profit_factor": 1.86,
+    "total_orders_filled": 608,
+    "total_settled_trade_legs": 359,
+    "distinct_stocks_traded": 124,
+    "average_holding_days": 28.5,
+    "min_holding_days": 1,
+    "max_holding_days": 133
+  },
+  "exit_triggers": [
+    {
+      "trigger": "BREAKEVEN_STOP_HIT",
+      "count": 86,
+      "gross_pnl": 574071.92,
+      "net_pnl": 446557.57
+    },
+    {
+      "trigger": "FINAL_VAULT_SETTLEMENT",
+      "count": 8,
+      "gross_pnl": 31120.66,
+      "net_pnl": 22795.85
+    },
+    {
+      "trigger": "P05_STOP_LOSS_HIT",
+      "count": 132,
+      "gross_pnl": -798417.47,
+      "net_pnl": -833079.52
+    },
+    {
+      "trigger": "P75_TARGET_1_PARTIAL_EXIT",
+      "count": 110,
+      "gross_pnl": 407658.53,
+      "net_pnl": 316326.03
+    },
+    {
+      "trigger": "Q90_RUNNER_TARGET_HIT",
+      "count": 23,
+      "gross_pnl": 471673.18,
+      "net_pnl": 373571.8
+    }
+  ],
+  "monthly_performance": [
+    {
+      "month": "2024-01",
+      "trades": 21,
+      "gross_pnl": 63840.14,
+      "net_pnl": 43496.6
+    },
+    {
+      "month": "2024-02",
+      "trades": 11,
+      "gross_pnl": 5614.1,
+      "net_pnl": -2059.03
+    },
+    {
+      "month": "2024-03",
+      "trades": 16,
+      "gross_pnl": 24271.62,
+      "net_pnl": 10127.93
+    },
+    {
+      "month": "2024-04",
+      "trades": 8,
+      "gross_pnl": 34027.64,
+      "net_pnl": 23795.56
+    },
+    {
+      "month": "2024-05",
+      "trades": 12,
+      "gross_pnl": 21839.54,
+      "net_pnl": 11296.87
+    },
+    {
+      "month": "2024-06",
+      "trades": 10,
+      "gross_pnl": 74590.13,
+      "net_pnl": 55826.53
+    },
+    {
+      "month": "2024-07",
+      "trades": 13,
+      "gross_pnl": 7121.13,
+      "net_pnl": -1711.7
+    },
+    {
+      "month": "2024-08",
+      "trades": 13,
+      "gross_pnl": -14245.46,
+      "net_pnl": -21768.93
+    },
+    {
+      "month": "2024-09",
+      "trades": 11,
+      "gross_pnl": 29515.29,
+      "net_pnl": 18161.01
+    },
+    {
+      "month": "2024-10",
+      "trades": 18,
+      "gross_pnl": -18580.01,
+      "net_pnl": -29719.39
+    },
+    {
+      "month": "2024-11",
+      "trades": 7,
+      "gross_pnl": 667.98,
+      "net_pnl": -4359.84
+    },
+    {
+      "month": "2024-12",
+      "trades": 7,
+      "gross_pnl": -38671.56,
+      "net_pnl": -40378.86
+    },
+    {
+      "month": "2025-01",
+      "trades": 14,
+      "gross_pnl": -6780.18,
+      "net_pnl": -17378.63
+    },
+    {
+      "month": "2025-02",
+      "trades": 17,
+      "gross_pnl": 1827.35,
+      "net_pnl": -9567.86
+    },
+    {
+      "month": "2025-03",
+      "trades": 22,
+      "gross_pnl": 47166.05,
+      "net_pnl": 26878.21
+    },
+    {
+      "month": "2025-04",
+      "trades": 7,
+      "gross_pnl": 33357.36,
+      "net_pnl": 24669.64
+    },
+    {
+      "month": "2025-05",
+      "trades": 8,
+      "gross_pnl": 16958.21,
+      "net_pnl": 10182.87
+    },
+    {
+      "month": "2025-06",
+      "trades": 5,
+      "gross_pnl": 26283.1,
+      "net_pnl": 19210.14
+    },
+    {
+      "month": "2025-07",
+      "trades": 14,
+      "gross_pnl": 55965.72,
+      "net_pnl": 37055.22
+    },
+    {
+      "month": "2025-08",
+      "trades": 11,
+      "gross_pnl": 18356.42,
+      "net_pnl": 9166.78
+    },
+    {
+      "month": "2025-09",
+      "trades": 7,
+      "gross_pnl": 8638.72,
+      "net_pnl": 1665.31
+    },
+    {
+      "month": "2025-10",
+      "trades": 14,
+      "gross_pnl": 32269.33,
+      "net_pnl": 15878.64
+    },
+    {
+      "month": "2025-11",
+      "trades": 7,
+      "gross_pnl": 1323.42,
+      "net_pnl": -4028.63
+    },
+    {
+      "month": "2025-12",
+      "trades": 13,
+      "gross_pnl": 73575.23,
+      "net_pnl": 52415.86
+    },
+    {
+      "month": "2026-01",
+      "trades": 11,
+      "gross_pnl": 74556.31,
+      "net_pnl": 56703.41
+    },
+    {
+      "month": "2026-02",
+      "trades": 10,
+      "gross_pnl": -18723.39,
+      "net_pnl": -30048.41
+    },
+    {
+      "month": "2026-03",
+      "trades": 18,
+      "gross_pnl": 67505.87,
+      "net_pnl": 42743.05
+    },
+    {
+      "month": "2026-04",
+      "trades": 7,
+      "gross_pnl": 27147.64,
+      "net_pnl": 19256.93
+    },
+    {
+      "month": "2026-05",
+      "trades": 12,
+      "gross_pnl": 42438.73,
+      "net_pnl": 25661.85
+    },
+    {
+      "month": "2026-06",
+      "trades": 11,
+      "gross_pnl": -166.68,
+      "net_pnl": -9898.24
+    },
+    {
+      "month": "2026-07",
+      "trades": 4,
+      "gross_pnl": -5582.93,
+      "net_pnl": -7101.16
+    }
+  ],
+  "top_winning_trades": [
+    {
+      "symbol": "SBC",
+      "entry_time": "2026-02-05T09:15:00+00:00",
+      "exit_time": "2026-06-18T15:15:00+00:00",
+      "holding_days": 133,
+      "quantity": 3113,
+      "entry_price": 30.71,
+      "exit_price": 42.44,
+      "gross_pnl": 36515.49,
+      "net_pnl": 28980.02,
+      "net_pnl_pct": 30.31,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "CUPID",
+      "entry_time": "2026-05-26T09:15:00+00:00",
+      "exit_time": "2026-06-28T15:15:00+00:00",
+      "holding_days": 33,
+      "quantity": 592,
+      "entry_price": 128.96,
+      "exit_price": 182.67,
+      "gross_pnl": 31796.32,
+      "net_pnl": 25242.98,
+      "net_pnl_pct": 33.06,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "CUPID",
+      "entry_time": "2025-07-29T09:15:00+00:00",
+      "exit_time": "2025-10-08T15:15:00+00:00",
+      "holding_days": 71,
+      "quantity": 1981,
+      "entry_price": 30.09,
+      "exit_price": 45.81,
+      "gross_pnl": 31141.32,
+      "net_pnl": 24749.46,
+      "net_pnl_pct": 41.52,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "SUZLON",
+      "entry_time": "2024-06-20T09:15:00+00:00",
+      "exit_time": "2024-08-08T15:15:00+00:00",
+      "holding_days": 49,
+      "quantity": 1370,
+      "entry_price": 53.08,
+      "exit_price": 74.93,
+      "gross_pnl": 29934.5,
+      "net_pnl": 23761.57,
+      "net_pnl_pct": 32.68,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "CUPID",
+      "entry_time": "2025-10-23T09:15:00+00:00",
+      "exit_time": "2025-11-30T15:15:00+00:00",
+      "holding_days": 38,
+      "quantity": 1384,
+      "entry_price": 47.0,
+      "exit_price": 68.12,
+      "gross_pnl": 29230.08,
+      "net_pnl": 23212.34,
+      "net_pnl_pct": 35.68,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "SHANTIGOLD",
+      "entry_time": "2026-03-26T09:15:00+00:00",
+      "exit_time": "2026-05-05T15:15:00+00:00",
+      "holding_days": 40,
+      "quantity": 567,
+      "entry_price": 163.66,
+      "exit_price": 212.54,
+      "gross_pnl": 27714.96,
+      "net_pnl": 21951.91,
+      "net_pnl_pct": 23.66,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "GVT&D",
+      "entry_time": "2024-01-01T09:15:00+00:00",
+      "exit_time": "2024-02-08T15:15:00+00:00",
+      "holding_days": 38,
+      "quantity": 88,
+      "entry_price": 552.14,
+      "exit_price": 818.79,
+      "gross_pnl": 23465.2,
+      "net_pnl": 18634.6,
+      "net_pnl_pct": 38.35,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "ONESOURCE",
+      "entry_time": "2026-01-27T09:15:00+00:00",
+      "exit_time": "2026-03-08T15:15:00+00:00",
+      "holding_days": 40,
+      "quantity": 62,
+      "entry_price": 1155.68,
+      "exit_price": 1508.64,
+      "gross_pnl": 21883.52,
+      "net_pnl": 17329.35,
+      "net_pnl_pct": 24.19,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "SKYGOLD",
+      "entry_time": "2024-06-23T09:15:00+00:00",
+      "exit_time": "2024-07-09T15:15:00+00:00",
+      "holding_days": 16,
+      "quantity": 356,
+      "entry_price": 152.94,
+      "exit_price": 209.73,
+      "gross_pnl": 20217.24,
+      "net_pnl": 16028.51,
+      "net_pnl_pct": 29.44,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    },
+    {
+      "symbol": "LTF",
+      "entry_time": "2025-06-25T09:15:00+00:00",
+      "exit_time": "2025-11-02T15:15:00+00:00",
+      "holding_days": 130,
+      "quantity": 292,
+      "entry_price": 204.14,
+      "exit_price": 272.41,
+      "gross_pnl": 19934.84,
+      "net_pnl": 15793.6,
+      "net_pnl_pct": 26.5,
+      "exit_trigger": "Q90_RUNNER_TARGET_HIT"
+    }
+  ],
+  "defensive_stop_samples": [
+    {
+      "symbol": "HEXT",
+      "entry_time": "2026-02-24T09:15:00+00:00",
+      "exit_time": "2026-03-10T15:15:00+00:00",
+      "holding_days": 14,
+      "quantity": 329,
+      "entry_price": 451.39,
+      "exit_price": 423.88,
+      "gross_pnl": -9050.79,
+      "net_pnl": -9420.24,
+      "net_pnl_pct": -6.34,
+      "exit_trigger": "P05_STOP_LOSS_HIT"
+    },
+    {
+      "symbol": "HEXT",
+      "entry_time": "2026-02-22T09:15:00+00:00",
+      "exit_time": "2026-02-24T15:15:00+00:00",
+      "holding_days": 2,
+      "quantity": 305,
+      "entry_price": 486.7,
+      "exit_price": 457.04,
+      "gross_pnl": -9046.3,
+      "net_pnl": -9415.61,
+      "net_pnl_pct": -6.34,
+      "exit_trigger": "P05_STOP_LOSS_HIT"
+    },
+    {
+      "symbol": "SHANTIGOLD",
+      "entry_time": "2026-02-04T09:15:00+00:00",
+      "exit_time": "2026-03-12T15:15:00+00:00",
+      "holding_days": 36,
+      "quantity": 727,
+      "entry_price": 202.08,
+      "exit_price": 189.77,
+      "gross_pnl": -8949.37,
+      "net_pnl": -9315.36,
+      "net_pnl_pct": -6.34,
+      "exit_trigger": "P05_STOP_LOSS_HIT"
+    },
+    {
+      "symbol": "LTF",
+      "entry_time": "2025-12-15T09:15:00+00:00",
+      "exit_time": "2026-01-20T15:15:00+00:00",
+      "holding_days": 36,
+      "quantity": 465,
+      "entry_price": 297.88,
+      "exit_price": 279.73,
+      "gross_pnl": -8439.75,
+      "net_pnl": -8787.52,
+      "net_pnl_pct": -6.34,
+      "exit_trigger": "P05_STOP_LOSS_HIT"
+    },
+    {
+      "symbol": "VMM",
+      "entry_time": "2025-09-10T09:15:00+00:00",
+      "exit_time": "2025-11-05T15:15:00+00:00",
+      "holding_days": 56,
+      "quantity": 863,
+      "entry_price": 150.49,
+      "exit_price": 141.32,
+      "gross_pnl": -7913.71,
+      "net_pnl": -8242.73,
+      "net_pnl_pct": -6.35,
+      "exit_trigger": "P05_STOP_LOSS_HIT"
+    }
+  ]
+}
