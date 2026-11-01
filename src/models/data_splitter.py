@@ -34,6 +34,19 @@ class DataSplitter:
             4: self.gold_dir / "features_stock_action_classifier",
         }
 
+    def get_top_institutional_symbols(self, n: int = 300) -> List[str]:
+        """Returns top institutional symbols ranked by 20-day turnover (price >= Rs.30)."""
+        cache_file = settings.DATA_DIR / "lakehouse" / "top_300_turnover_symbols.json"
+        if cache_file.exists():
+            import json
+            try:
+                with open(cache_file) as f:
+                    data = json.load(f)
+                    return data.get("symbols", [])[:n]
+            except Exception as e:
+                logger.warning(f"Failed to read cached top symbols: {e}")
+        return []
+
     def load_dataset(
         self,
         model_id: int,
@@ -57,7 +70,11 @@ class DataSplitter:
             sample_set = set(sample_symbols)
             parquet_files = [f for f in parquet_files if f.stem in sample_set]
         elif max_symbols:
-            parquet_files = parquet_files[:max_symbols]
+            top_syms = set(self.get_top_institutional_symbols(max_symbols))
+            if top_syms:
+                parquet_files = [f for f in parquet_files if f.stem in top_syms]
+            else:
+                parquet_files = parquet_files[:max_symbols]
 
         logger.info(f"Loading Model {model_id} features across {len(parquet_files)} stocks...")
 

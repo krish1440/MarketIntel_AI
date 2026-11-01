@@ -72,7 +72,7 @@ class AIStrategyRunner:
 
     MAX_STOP_LOSS_PCT = 0.06       # Strict institutional 6.0% maximum safety loss floor
     MIN_CONFIDENCE_STRONG_BUY = 0.65  # 65% minimum confidence
-    MIN_CONFIDENCE_BUY = 0.70         # 70% minimum confidence
+    MIN_CONFIDENCE_BUY = 0.55         # 55% minimum confidence for regular BUY
     MAX_STRUCTURAL_DRAWDOWN = -0.40   # Trash stock filter: reject drawdown > -40%
 
     def __init__(
@@ -283,13 +283,15 @@ class AIStrategyRunner:
         q90_raw = float(self.models["model1"]["q90"].predict(x1)[0])
         target_2 = current_price * (1.0 + q90_raw) if abs(q90_raw) < 5.0 else q90_raw
 
-        # 4. Corridor Valuation Gate Check
-        # Rule: Current price must not be overbought/exhausted (must be < P95).
-        # Sweet spot is P25 to P60 (relative to baseline).
+        # 4. Corridor Valuation & Penny Stock Gate Checks
+        # Rule: Current price must not be overbought/exhausted (must be < P95) and >= Rs.30.
         is_approved = True
         rejection_reason = None
 
-        if current_price >= price_p95:
+        if current_price < 30.0:
+            is_approved = False
+            rejection_reason = f"Penny Stock Gate: Price Rs.{current_price:.2f} < Rs.30.00 floor (Institutional quality required)"
+        elif current_price >= price_p95:
             is_approved = False
             rejection_reason = f"Corridor Rejection: Price Rs.{current_price:.2f} >= P95 ceiling Rs.{price_p95:.2f} (Overbought/Exhausted)"
         elif action not in ["STRONG_BUY", "BUY"]:
@@ -308,9 +310,11 @@ class AIStrategyRunner:
         ml_stop_price = max(price_p05, max_safety_stop)
         ml_stop_price = round(min(ml_stop_price, current_price * 0.985), 2)  # At least 1.5% below entry
 
-        # Target 1: Model 3 P75 resistance (ensures positive reward:risk ratio)
-        ml_target_1 = max(round(price_p75, 2), round(current_price * 1.03, 2))
-        ml_target_2 = max(round(target_2, 2), round(ml_target_1 * 1.05, 2))
+        # Target 1: Model 3 P75 with Asymmetric 1.8x Reward-to-Risk hurdle
+        risk_dist = current_price - ml_stop_price
+        min_reward_target = current_price + (risk_dist * 1.80)
+        ml_target_1 = max(round(price_p75, 2), round(min_reward_target, 2), round(current_price * 1.08, 2))
+        ml_target_2 = max(round(target_2, 2), round(ml_target_1 * 1.10, 2))
 
         decision = SignalDecision(
             symbol=symbol,

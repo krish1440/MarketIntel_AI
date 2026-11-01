@@ -66,9 +66,9 @@ class VirtualPortfolioManager:
     """
 
     DEFAULT_CAPITAL = 1000000.0        # ₹10,00,000 INR
-    MAX_CAPITAL_PER_TRADE_PCT = 0.05   # 5% max allocation per position
+    MAX_CAPITAL_PER_TRADE_PCT = 0.10   # Up to 10% max allocation per position for high conviction
     MAX_OPEN_POSITIONS = 10            # Max 10 simultaneous positions
-    RISK_PER_TRADE_PCT = 0.01          # 1% account risk (₹10,000)
+    RISK_PER_TRADE_PCT = 0.015         # 1.5% account risk (₹15,000) for balanced growth
     DAILY_CIRCUIT_BREAKER_PCT = -0.03  # -3% daily drawdown halt
 
     def __init__(
@@ -92,6 +92,12 @@ class VirtualPortfolioManager:
         self.db_path = db_path or (self.db_dir / "paper_ledger.db")
         self._init_database()
         self._load_state()
+
+    def start_new_trading_session(self, current_date: date):
+        """Resets daily circuit breaker and establishes day_start baseline for each market session."""
+        self.current_trading_date = current_date
+        self.day_start_portfolio_value = self.get_portfolio_value()
+        self.circuit_breaker_tripped = False
 
     def _init_database(self):
         """Initializes SQLite tables for persistent orders, positions, and trade history."""
@@ -267,8 +273,9 @@ class VirtualPortfolioManager:
         conviction_mult = min(1.25, max(0.75, confidence / 0.70))
         target_capital = (risk_budget / stop_dist_pct) * conviction_mult
 
-        # Hard caps
-        max_allowed_capital = total_equity * self.MAX_CAPITAL_PER_TRADE_PCT
+        # Hard caps scaled by conviction (10% for >=65% confidence, 7.5% for >=55%)
+        cap_pct = 0.10 if confidence >= 0.65 else 0.075
+        max_allowed_capital = total_equity * cap_pct
         allocated_capital = min(target_capital, max_allowed_capital, self.cash)
 
         if allocated_capital < (current_price * 1):
@@ -369,11 +376,11 @@ class VirtualPortfolioManager:
 
         exit_t = exit_time or datetime.now(timezone.utc)
 
-        # Check Target 1 (Book 50% Profit)
+        # Check Target 1 (Book 35% Profit, let 65% runner ride)
         if not pos.partial_exit_done and current_price >= pos.ml_target_1:
-            partial_qty = pos.quantity // 2
-            if partial_qty > 0:
-                logger.info(f"TARGET 1 HIT for {symbol}: Booking 50% profit on {partial_qty} shares at Rs.{current_price:.2f}!")
+            partial_qty = max(1, int(round(pos.quantity * 0.35)))
+            if partial_qty < pos.quantity:
+                logger.info(f"TARGET 1 HIT for {symbol}: Booking 35% profit on {partial_qty} shares at Rs.{current_price:.2f}!")
                 # Execute partial sell
                 req = OrderRequest(
                     symbol=symbol,

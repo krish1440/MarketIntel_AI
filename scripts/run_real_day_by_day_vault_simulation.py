@@ -93,7 +93,7 @@ def run_real_day_by_day_simulation():
 
     for day_idx, current_date in enumerate(trading_dates):
         day_str = current_date.strftime("%Y-%m-%d") if hasattr(current_date, "strftime") else str(current_date)
-        
+        pm.start_new_trading_session(current_date)
         sim_dt = datetime(current_date.year, current_date.month, current_date.day, 15, 15, tzinfo=timezone.utc)
         
         # -------------------------------------------------------------
@@ -139,14 +139,14 @@ def run_real_day_by_day_simulation():
         # -------------------------------------------------------------
         # STEP B: EVALUATE NEW ENTRIES ONLY IF CASH & SLOTS AVAILABLE
         # -------------------------------------------------------------
-        if len(pm.positions) < pm.MAX_OPEN_POSITIONS and pm.cash > 50000:
+        if len(pm.positions) < pm.MAX_OPEN_POSITIONS and pm.cash > 20000:
             day_df = master_df.filter(pl.col("date") == current_date)
             if len(day_df) >= 10:
                 # Model 0 Screener builds watchlist
                 watchlist = runner.run_premarket_screener(day_df)
 
                 # Select candidates meeting strict criteria
-                for candidate in watchlist[:5]:
+                for candidate in watchlist[:8]:
                     if len(pm.positions) >= pm.MAX_OPEN_POSITIONS:
                         break
 
