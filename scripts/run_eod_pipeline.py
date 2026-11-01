@@ -135,3 +135,4 @@ def run_eod_pipeline(universe_mode: str = "top300", max_workers: int = 12):
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "top300"
     run_eod_pipeline(universe_mode=mode)
+
