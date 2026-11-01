@@ -19,12 +19,12 @@ def simulate_holdout_trading():
     _, test_df = splitter.load_dataset(0, max_symbols=300, min_turnover_cr=0.5)
     features = splitter.get_feature_columns(test_df)
     
-    # Load Stage 1 trained model (trained strictly on <2024 data)
-    model0_path = settings.BASE_DIR / "models" / "stage1" / "model0_screener.txt"
+    # Load Stage 1 validation model (trained strictly on <2024 data)
+    model0_path = settings.BASE_DIR / "models" / "validation" / "weights" / "model0_screener.txt"
     model0 = lgb.Booster(model_file=str(model0_path))
     
-    # Load Model 4 Classifier
-    model4_path = settings.BASE_DIR / "models" / "stage1" / "model4_classifier.joblib"
+    # Load Model 4 Classifier (validation model)
+    model4_path = settings.BASE_DIR / "models" / "validation" / "weights" / "model4_classifier.joblib"
     calibrated_clf4 = joblib.load(model4_path)
     _, test_df4 = splitter.load_dataset(4, max_symbols=300, min_turnover_cr=0.5)
     features4 = splitter.get_feature_columns(test_df4)
@@ -146,7 +146,7 @@ def simulate_holdout_trading():
     print(f"Max Portfolio Drawdown       : {max_drawdown:.2f}%")
     print("=" * 80)
 
-    with open(settings.BASE_DIR / "models" / "stage1" / "pnl_financial_audit.json", "w") as f:
+    with open(settings.BASE_DIR / "models" / "validation" / "metrics" / "pnl_financial_audit.json", "w") as f:
         json.dump(results, f, indent=2)
 
 if __name__ == "__main__":
