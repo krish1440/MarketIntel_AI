@@ -160,3 +160,4 @@ class StreamingAggregator:
 
             # Clear 5m buffer
             self._buffer_5m[key] = []
+

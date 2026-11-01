@@ -48,15 +48,16 @@ class PolarsFeatureEngine:
         self.m3 = Model3FeatureEngineer()
         self.m4 = Model4FeatureEngineer()
 
-    def process_all_stocks(self, limit: Optional[int] = None):
+    def process_all_stocks(self, limit: Optional[int] = None, force_models: Optional[List[int]] = None):
         """Processes all stocks across the universe and builds the Gold Feature lakehouse."""
+        force_set = set(force_models or [])
         exchange_dir = self.silver_ohlcv_dir / "exchange=NSE"
         stock_dirs = sorted(list(exchange_dir.glob("symbol=*")))
         if limit:
             stock_dirs = stock_dirs[:limit]
 
         total = len(stock_dirs)
-        logger.info(f"Starting Gold Feature Extraction for {total} stocks across ALL 5 MODELS...")
+        logger.info(f"Starting Gold Feature Extraction for {total} stocks across ALL 5 MODELS (forced={force_set})...")
         start_time = time.time()
         
         m0_count = m1_count = m2_count = m3_count = m4_count = 0
@@ -76,7 +77,7 @@ class PolarsFeatureEngine:
 
                 # 1. Model 0 Features (Pre-Market Screener)
                 m0_file = self.gold_model0_dir / f"{symbol}.parquet"
-                if not m0_file.exists():
+                if 0 in force_set or not m0_file.exists():
                     df0 = self.m0.compute_for_stock(symbol, df)
                     if df0 is not None and len(df0) > 0:
                         df0.write_parquet(m0_file, compression="zstd")
@@ -86,7 +87,7 @@ class PolarsFeatureEngine:
 
                 # 2. Model 1 Features (Positional Swing < 1 Year)
                 m1_file = self.gold_model1_dir / f"{symbol}.parquet"
-                if not m1_file.exists():
+                if 1 in force_set or not m1_file.exists():
                     df1 = self.m1.compute_for_stock(symbol, df)
                     if df1 is not None and len(df1) > 0:
                         df1.write_parquet(m1_file, compression="zstd")
@@ -95,7 +96,7 @@ class PolarsFeatureEngine:
 
                 # 3. Model 2 Features (Wealth Compounding > 1 Year)
                 m2_file = self.gold_model2_dir / f"{symbol}.parquet"
-                if not m2_file.exists():
+                if 2 in force_set or not m2_file.exists():
                     df2 = self.m2.compute_for_stock(symbol, df)
                     if df2 is not None and len(df2) > 0:
                         df2.write_parquet(m2_file, compression="zstd")
@@ -104,7 +105,7 @@ class PolarsFeatureEngine:
 
                 # 4. Model 3 Features (Price Corridors)
                 m3_file = self.gold_model3_dir / f"{symbol}.parquet"
-                if not m3_file.exists():
+                if 3 in force_set or not m3_file.exists():
                     df3 = self.m3.compute_for_stock(symbol, df)
                     if df3 is not None and len(df3) > 0:
                         df3.write_parquet(m3_file, compression="zstd")
@@ -113,7 +114,7 @@ class PolarsFeatureEngine:
 
                 # 5. Model 4 Features (Universal Stock Action & Confidence Classifier)
                 m4_file = self.gold_model4_dir / f"{symbol}.parquet"
-                if not m4_file.exists():
+                if 4 in force_set or not m4_file.exists():
                     df4 = self.m4.compute_for_stock(symbol, df)
                     if df4 is not None and len(df4) > 0:
                         df4.write_parquet(m4_file, compression="zstd")

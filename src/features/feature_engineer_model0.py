@@ -34,30 +34,73 @@ class Model0FeatureEngineer:
         mapper_path = self.silver_master_dir / "stock_sector_mapping.parquet"
         self.stock_sector_map = pl.read_parquet(mapper_path) if mapper_path.exists() else None
 
-        # 2. Sector Indices & Nifty 50
-        macro_path = self.silver_macro_dir / "macro_indices.parquet"
-        if macro_path.exists():
-            macro_df = pl.read_parquet(macro_path)
-            col = "timestamp" if "timestamp" in macro_df.columns else "date"
-            self.macro_df = macro_df.with_columns(pl.col(col).cast(pl.Date).alias("date_key"))
-        else:
-            self.macro_df = None
+        # Build Master Macro Context DataFrame joined by date_key
+        context_df = None
 
-        # 3. Global Correlators (SP500, Nasdaq, Crude, USDINR, 10Y Yield)
-        self.global_dfs = {}
-        for asset in ["SP500", "NASDAQ100", "CRUDE_OIL", "USD_INR", "US10Y_YIELD"]:
-            p = self.silver_global_dir / f"{asset}.parquet"
+        # 2. Global Correlators (SP500, Nasdaq, Crude, USDINR, 10Y Yield)
+        asset_map = {
+            "SP500": ("sp500_overnight_ret", 1),
+            "NASDAQ100": ("nasdaq_overnight_ret", 1),
+            "CRUDE_OIL": ("crude_oil_ret_3d", 3),
+            "USD_INR": ("usdinr_ret_1d", 1),
+            "US10Y_YIELD": ("us_10y_yield_delta", 1)
+        }
+
+        for asset, (col_alias, shift_k) in asset_map.items():
+            p = self.silver_global_dir / f"ticker={asset}" / "data.parquet"
             if p.exists():
                 gdf = pl.read_parquet(p)
-                col = "timestamp" if "timestamp" in gdf.columns else "date"
-                self.global_dfs[asset] = gdf.with_columns(pl.col(col).cast(pl.Date).alias("date_key"))
+                col_t = "date" if "date" in gdf.columns else "timestamp"
+                gdf = gdf.sort(col_t).with_columns([
+                    pl.col(col_t).cast(pl.Date).alias("date_key"),
+                    ((pl.col("close") / pl.col("close").shift(shift_k)).log() if asset != "US10Y_YIELD" else (pl.col("close") - pl.col("close").shift(1))).alias(col_alias)
+                ]).select(["date_key", col_alias])
 
-        # 4. FII / DII Institutional Flows
+                if context_df is None:
+                    context_df = gdf
+                else:
+                    context_df = context_df.join(gdf, on="date_key", how="outer_coalesce")
+
+        # 3. India VIX & Nifty 50
+        vix_path = self.silver_macro_dir / "index=INDIA_VIX" / "data.parquet"
+        if vix_path.exists():
+            vdf = pl.read_parquet(vix_path)
+            col_t = "date" if "date" in vdf.columns else "timestamp"
+            vdf = vdf.sort(col_t).with_columns([
+                pl.col(col_t).cast(pl.Date).alias("date_key"),
+                ((pl.col("close") - pl.col("close").rolling_mean(20)) / (pl.col("close").rolling_std(20) + 1e-8)).alias("india_vix_zscore_20d")
+            ]).select(["date_key", "india_vix_zscore_20d"])
+            if context_df is not None:
+                context_df = context_df.join(vdf, on="date_key", how="outer_coalesce")
+
+        nifty_path = self.silver_macro_dir / "index=NIFTY_50" / "data.parquet"
+        if nifty_path.exists():
+            ndf = pl.read_parquet(nifty_path)
+            col_t = "date" if "date" in ndf.columns else "timestamp"
+            ndf = ndf.sort(col_t).with_columns([
+                pl.col(col_t).cast(pl.Date).alias("date_key"),
+                (pl.col("close") / pl.col("close").shift(5)).log().alias("nifty_ret_5d")
+            ]).select(["date_key", "nifty_ret_5d"])
+            if context_df is not None:
+                context_df = context_df.join(ndf, on="date_key", how="outer_coalesce")
+
+        # 4. FII Flows
         fii_path = self.silver_macro_dir / "fii_dii_flows.parquet"
         if fii_path.exists():
-            self.fii_df = pl.read_parquet(fii_path).with_columns(pl.col("date").cast(pl.Date).alias("date_key"))
+            fdf = pl.read_parquet(fii_path)
+            col_t = "date" if "date" in fdf.columns else "timestamp"
+            fdf = fdf.sort(col_t).with_columns([
+                pl.col(col_t).cast(pl.Date).alias("date_key"),
+                (pl.col("fii_net_crores").rolling_mean(5) / 1000.0).alias("fii_flow_5d_norm")
+            ]).select(["date_key", "fii_flow_5d_norm"])
+            if context_df is not None:
+                context_df = context_df.join(fdf, on="date_key", how="outer_coalesce")
+
+        if context_df is not None:
+            # Sort by date and forward-fill weekend/holiday gaps
+            self.macro_context_df = context_df.sort("date_key").fill_null(strategy="forward").fill_null(0.0)
         else:
-            self.fii_df = None
+            self.macro_context_df = None
 
     def compute_for_stock(self, symbol: str, df: Optional[pl.DataFrame] = None) -> Optional[pl.DataFrame]:
         """Computes Model 0's 28 feature matrix for a single stock."""
@@ -85,8 +128,9 @@ class Model0FeatureEngineer:
             atr5 = ind.calc_atr("high", "low", "close", 5)
             atr20 = ind.calc_atr("high", "low", "close", 20)
             rsi14 = ind.calc_rsi("close", 14)
+            adx14 = ind.calc_adx("high", "low", "close", 14)
 
-            df = df.with_columns(ret_exprs + [ema20, ema200, atr14, atr5, atr20, rsi14])
+            df = df.with_columns(ret_exprs + [ema20, ema200, atr14, atr5, atr20, rsi14, adx14])
 
             # Normalized EMA distances & Volatility ratios
             dist_ema20 = ind.calc_distance_to_ema_atr("close", "ema_20", "atr_14", "dist_ema20_atr")
@@ -108,6 +152,13 @@ class Model0FeatureEngineer:
             df = df.with_columns(
                 (pl.col("close") * pl.col("volume")).rolling_mean(20).alias("turnover_20d_avg")
             )
+
+            # --- Category D, E, F: Join Macro Context ---
+            if self.macro_context_df is not None:
+                df = df.join(self.macro_context_df, on="date_key", how="left").fill_null(strategy="forward").fill_null(0.0)
+                # Compute Relative Strength vs Nifty 50
+                if "nifty_ret_5d" in df.columns:
+                    df = df.with_columns((pl.col("ret_5d") - pl.col("nifty_ret_5d")).alias("rs_vs_nifty_5d"))
 
             # Add symbol column
             if "symbol" not in df.columns:
