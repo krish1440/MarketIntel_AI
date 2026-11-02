@@ -106,7 +106,7 @@ class AngelClient:
                             time.sleep(1.0)
                             continue
                     if "exceeding access rate" in msg.lower() or "rate" in msg.lower():
-                        sleep_time = attempt * 2.0
+                        sleep_time = 5.0 * attempt
                         logger.warning(f"Rate limited by SmartAPI. Sleeping {sleep_time:.1f}s before retry ({attempt}/{max_retries})...")
                         time.sleep(sleep_time)
                         continue
@@ -116,10 +116,10 @@ class AngelClient:
                 if "invalid token" in err_str or "ag8001" in err_str:
                     logger.warning("Token exception detected. Auto-renewing session via TOTP...")
                     if self.login():
-                        time.sleep(1.0)
+                        time.sleep(2.0)
                         continue
                 if "exceeding access rate" in err_str or "access denied" in err_str:
-                    sleep_time = attempt * 2.5
+                    sleep_time = 5.0 * attempt
                     logger.warning(f"Rate limit triggered. Sleeping {sleep_time:.1f}s before retry ({attempt}/{max_retries})...")
                     time.sleep(sleep_time)
                 else:

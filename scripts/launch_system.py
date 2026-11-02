@@ -3,6 +3,7 @@ import sys
 import time
 import signal
 import logging
+import threading
 from pathlib import Path
 from datetime import datetime, date, timezone, timedelta, time as dtime
 from typing import Optional, Dict, Any, List
@@ -16,6 +17,7 @@ from src.serving.redis_manager import RedisManager
 from src.execution.portfolio_manager import VirtualPortfolioManager
 from src.execution.strategy_runner import AIStrategyRunner
 from src.mlops.champion_governance import ChampionGovernanceEngine
+from src.crawler.gap_orchestrator import GapOrchestrator
 from scripts.run_eod_pipeline import run_eod_pipeline
 
 # Indian Standard Time (IST = UTC+5:30)
@@ -65,6 +67,8 @@ class MarketIntelSystem:
         self.strategy_runner = None
         self.governance_engine = None
         self.live_ws = None
+        self.gap_orchestrator = None
+        self.gap_sync_started = False
 
         # State tracking to prevent duplicate actions on same day
         self.last_screener_date: Optional[date] = None
@@ -107,6 +111,25 @@ class MarketIntelSystem:
         # 6. Champion MLOps Governance
         self.governance_engine = ChampionGovernanceEngine()
         logger.info("[OK] MLOps Walk-Forward Retraining Engine ready.")
+
+        # 7. Dual-Engine 1D & 1M Gap Orchestrator
+        self.gap_orchestrator = GapOrchestrator()
+        now_ist = datetime.now(IST)
+        is_market_active = (now_ist.weekday() < 5) and (dtime(9, 15) <= now_ist.time() < dtime(15, 30))
+
+        if is_market_active:
+            logger.info("[DUAL-ENGINE] Market is ACTIVELY TRADING! Spawning background thread to backfill missing 1D & 1M data without blocking live orders...")
+            threading.Thread(
+                target=self.gap_orchestrator.run_full_gap_sync,
+                kwargs={"universe_mode": "all", "max_1m_symbols": 50, "is_background": True},
+                daemon=True,
+                name="BackgroundGapSyncWorker"
+            ).start()
+            self.gap_sync_started = True
+        else:
+            logger.info("[DUAL-ENGINE] Market is CLOSED / PRE-MARKET. Checking and resolving 1D & 1M historical gaps across ALL stocks before trading...")
+            self.gap_orchestrator.run_full_gap_sync(universe_mode="all", max_1m_symbols=50, is_background=False)
+            self.gap_sync_started = True
 
         logger.info(">>> ALL PRE-FLIGHT CHECKS PASSED. 24/7 DAEMON INITIALIZED <<<\n")
 

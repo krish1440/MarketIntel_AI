@@ -154,3 +154,12 @@ class SecurityMaster:
             return res.to_dicts()[0]
         return None
 
+    def get_token(self, symbol: str, exchange: str = "NSE") -> Optional[str]:
+        """Lookup exchange instrument token for a symbol."""
+        sec = self.get_by_symbol(symbol)
+        if not sec:
+            return None
+        col = "nse_token" if exchange.upper() == "NSE" else "bse_code"
+        token = sec.get(col)
+        return str(token) if token else None
+

@@ -59,7 +59,7 @@ class Model0FeatureEngineer:
                 if context_df is None:
                     context_df = gdf
                 else:
-                    context_df = context_df.join(gdf, on="date_key", how="outer_coalesce")
+                    context_df = context_df.join(gdf, on="date_key", how="full", coalesce=True)
 
         # 3. India VIX & Nifty 50
         vix_path = self.silver_macro_dir / "index=INDIA_VIX" / "data.parquet"
@@ -71,7 +71,7 @@ class Model0FeatureEngineer:
                 ((pl.col("close") - pl.col("close").rolling_mean(20)) / (pl.col("close").rolling_std(20) + 1e-8)).alias("india_vix_zscore_20d")
             ]).select(["date_key", "india_vix_zscore_20d"])
             if context_df is not None:
-                context_df = context_df.join(vdf, on="date_key", how="outer_coalesce")
+                context_df = context_df.join(vdf, on="date_key", how="full", coalesce=True)
 
         nifty_path = self.silver_macro_dir / "index=NIFTY_50" / "data.parquet"
         if nifty_path.exists():
@@ -82,19 +82,21 @@ class Model0FeatureEngineer:
                 (pl.col("close") / pl.col("close").shift(5)).log().alias("nifty_ret_5d")
             ]).select(["date_key", "nifty_ret_5d"])
             if context_df is not None:
-                context_df = context_df.join(ndf, on="date_key", how="outer_coalesce")
+                context_df = context_df.join(ndf, on="date_key", how="full", coalesce=True)
 
         # 4. FII Flows
         fii_path = self.silver_macro_dir / "fii_dii_flows.parquet"
         if fii_path.exists():
             fdf = pl.read_parquet(fii_path)
             col_t = "date" if "date" in fdf.columns else "timestamp"
-            fdf = fdf.sort(col_t).with_columns([
-                pl.col(col_t).cast(pl.Date).alias("date_key"),
-                (pl.col("fii_net_crores").rolling_mean(5) / 1000.0).alias("fii_flow_5d_norm")
-            ]).select(["date_key", "fii_flow_5d_norm"])
-            if context_df is not None:
-                context_df = context_df.join(fdf, on="date_key", how="outer_coalesce")
+            col_fii = "fii_net" if "fii_net" in fdf.columns else "fii_net_crores"
+            if col_fii in fdf.columns:
+                fdf = fdf.sort(col_t).with_columns([
+                    pl.col(col_t).cast(pl.Date).alias("date_key"),
+                    (pl.col(col_fii).rolling_mean(5) / 1000.0).alias("fii_flow_5d_norm")
+                ]).select(["date_key", "fii_flow_5d_norm"])
+                if context_df is not None:
+                    context_df = context_df.join(fdf, on="date_key", how="full", coalesce=True)
 
         if context_df is not None:
             # Sort by date and forward-fill weekend/holiday gaps

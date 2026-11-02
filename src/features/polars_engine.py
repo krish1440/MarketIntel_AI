@@ -48,6 +48,42 @@ class PolarsFeatureEngine:
         self.m3 = Model3FeatureEngineer()
         self.m4 = Model4FeatureEngineer()
 
+    def process_symbol(self, df: pl.DataFrame, symbol: str, exchange: str = "NSE") -> bool:
+        """Processes a single stock DataFrame across all 5 Gold model feature stores."""
+        try:
+            if len(df) < 30:
+                return False
+
+            # 1. Model 0
+            df0 = self.m0.compute_for_stock(symbol, df)
+            if df0 is not None and len(df0) > 0:
+                df0.write_parquet(self.gold_model0_dir / f"{symbol}.parquet", compression="zstd")
+
+            # 2. Model 1
+            df1 = self.m1.compute_for_stock(symbol, df)
+            if df1 is not None and len(df1) > 0:
+                df1.write_parquet(self.gold_model1_dir / f"{symbol}.parquet", compression="zstd")
+
+            # 3. Model 2
+            df2 = self.m2.compute_for_stock(symbol, df)
+            if df2 is not None and len(df2) > 0:
+                df2.write_parquet(self.gold_model2_dir / f"{symbol}.parquet", compression="zstd")
+
+            # 4. Model 3
+            df3 = self.m3.compute_for_stock(symbol, df)
+            if df3 is not None and len(df3) > 0:
+                df3.write_parquet(self.gold_model3_dir / f"{symbol}.parquet", compression="zstd")
+
+            # 5. Model 4
+            df4 = self.m4.compute_for_stock(symbol, df)
+            if df4 is not None and len(df4) > 0:
+                df4.write_parquet(self.gold_model4_dir / f"{symbol}.parquet", compression="zstd")
+
+            return True
+        except Exception as e:
+            logger.warning(f"Error computing Gold features for {symbol}: {e}")
+            return False
+
     def process_all_stocks(self, limit: Optional[int] = None, force_models: Optional[List[int]] = None):
         """Processes all stocks across the universe and builds the Gold Feature lakehouse."""
         force_set = set(force_models or [])
