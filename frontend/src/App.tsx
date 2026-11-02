@@ -37,6 +37,7 @@ export const App: React.FC = () => {
   const [isUniverseDrawerOpen, setIsUniverseDrawerOpen] = useState(false)
   const [isSystemModalOpen, setIsSystemModalOpen] = useState(false)
   const [isWsConnected, setIsWsConnected] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // 1. Initial Load of Global Data
   const loadGlobalData = async () => {
@@ -65,6 +66,9 @@ export const App: React.FC = () => {
 
   // 2. Load Stock Specific Data
   const loadStockData = async (symbol: string) => {
+    // Clear previous stock's corridor and signal immediately so new stock values reload cleanly
+    setCorridor(null)
+    setSignal(null)
     try {
       const [q, corr, sig] = await Promise.allSettled([
         api.getStockQuote(symbol),
@@ -77,6 +81,19 @@ export const App: React.FC = () => {
       if (sig.status === 'fulfilled') setSignal(sig.value)
     } catch (e) {
       console.error(`Error fetching stock data for ${symbol}:`, e)
+    }
+  }
+
+  // Manual Trigger to re-fetch all active quotes, models & telemetry
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.allSettled([
+        loadGlobalData(),
+        loadStockData(activeSymbol),
+      ])
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 400)
     }
   }
 
@@ -104,13 +121,15 @@ export const App: React.FC = () => {
           setQuote((prev) => {
             if (!prev) return prev
             const newLtp = tick.ltp || tick.close || prev.ltp
-            const newChange = newLtp - (prev.close || newLtp)
-            const newChangePct = prev.close ? (newChange / prev.close) * 100 : prev.change_pct
+            const openPx = prev.open || prev.close || newLtp
+            const newChange = newLtp - openPx
+            const newChangePct = openPx > 0 ? (newChange / openPx) * 100 : (prev.pct_change || 0)
             return {
               ...prev,
               ltp: newLtp,
               change: newChange,
               change_pct: newChangePct,
+              pct_change: newChangePct,
               high: Math.max(prev.high || 0, newLtp),
               low: Math.min(prev.low || newLtp, newLtp),
               volume: tick.volume || prev.volume,
@@ -147,10 +166,13 @@ export const App: React.FC = () => {
         quote={quote}
         health={health}
         breadth={breadth}
+        signal={signal}
         activeSymbol={activeSymbol}
         onSelectSymbol={setActiveSymbol}
         onOpenSystemModal={() => setIsSystemModalOpen(true)}
         onToggleUniverseDrawer={() => setIsUniverseDrawerOpen(true)}
+        onRefresh={handleManualRefresh}
+        isRefreshing={isRefreshing}
         isWsConnected={isWsConnected}
       />
 
@@ -188,6 +210,8 @@ export const App: React.FC = () => {
             signal={signal}
             screenerList={screenerList}
             onSelectSymbol={setActiveSymbol}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isRefreshing}
           />
         </div>
 
@@ -214,3 +238,4 @@ export const App: React.FC = () => {
 }
 
 export default App
+

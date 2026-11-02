@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   createChart,
+  CandlestickSeries,
+  HistogramSeries,
   IChartApi,
-  ISeriesApi,
   CandlestickData,
   HistogramData,
   Time
 } from 'lightweight-charts'
 import { CandleItem, CorridorForecast } from '../../types'
 import { api } from '../../services/api'
-import { Loader2, Maximize2 } from 'lucide-react'
+import { Loader2, BarChart3, TrendingUp, Layers } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface TradingViewChartProps {
   symbol: string
@@ -27,8 +29,9 @@ const TIMEFRAMES = [
 export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corridor }) => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const chartInstance = useRef<IChartApi | null>(null)
-  const candleSeries = useRef<ISeriesApi<'Candlestick'> | null>(null)
-  const volumeSeries = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const candleSeries = useRef<any>(null)
+  const volumeSeries = useRef<any>(null)
+  const activePriceLines = useRef<any[]>([])
 
   const [timeframe, setTimeframe] = useState<string>('5m')
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -56,7 +59,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     if (!chartContainerRef.current) return
 
     const isDark = document.documentElement.classList.contains('dark')
-    const bgColor = isDark ? '#0f1118' : '#ffffff'
+    const bgColor = isDark ? '#0e121b' : '#ffffff'
     const textColor = isDark ? '#94a3b8' : '#475569'
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)'
 
@@ -66,63 +69,67 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
       chartInstance.current = null
     }
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight || 520,
-      layout: {
-        background: { color: bgColor },
-        textColor: textColor,
-        fontFamily: "'JetBrains Mono', 'Inter', monospace",
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
-      },
-      crosshair: {
-        mode: 1, // Magnet
-      },
-      rightPriceScale: {
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.2, // Leave room for volume
+    try {
+      const chart = createChart(chartContainerRef.current, {
+        width: chartContainerRef.current.clientWidth,
+        height: chartContainerRef.current.clientHeight || 520,
+        layout: {
+          background: { color: bgColor },
+          textColor: textColor,
+          fontFamily: "'JetBrains Mono', 'Inter', monospace",
+          fontSize: 11,
         },
-      },
-      timeScale: {
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    })
+        grid: {
+          vertLines: { color: gridColor },
+          horzLines: { color: gridColor },
+        },
+        crosshair: {
+          mode: 1, // Magnet
+        },
+        rightPriceScale: {
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2, // Leave room for volume
+          },
+        },
+        timeScale: {
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      })
 
-    // Candlestick Series
-    const candle = (chart as any).addCandlestickSeries({
-      upColor: isDark ? '#10b981' : '#059669',
-      downColor: isDark ? '#f43f5e' : '#e11d48',
-      borderVisible: false,
-      wickUpColor: isDark ? '#10b981' : '#059669',
-      wickDownColor: isDark ? '#f43f5e' : '#e11d48',
-    })
+      // Candlestick Series (Lightweight Charts v5)
+      const candle = chart.addSeries(CandlestickSeries, {
+        upColor: isDark ? '#10b981' : '#059669',
+        downColor: isDark ? '#f43f5e' : '#e11d48',
+        borderVisible: false,
+        wickUpColor: isDark ? '#10b981' : '#059669',
+        wickDownColor: isDark ? '#f43f5e' : '#e11d48',
+      })
 
-    // Volume Series
-    const volume = (chart as any).addHistogramSeries({
-      priceFormat: {
-        type: 'volume',
-      },
-      priceScaleId: '', // Overlay over price scale
-    })
+      // Volume Series (Lightweight Charts v5)
+      const volume = chart.addSeries(HistogramSeries, {
+        priceFormat: {
+          type: 'volume',
+        },
+        priceScaleId: '', // Overlay over price scale
+      })
 
-    volume.priceScale().applyOptions({
-      scaleMargins: {
-        top: 0.8, // Align volume to bottom 20%
-        bottom: 0,
-      },
-    })
+      volume.priceScale().applyOptions({
+        scaleMargins: {
+          top: 0.8, // Align volume to bottom 20%
+          bottom: 0,
+        },
+      })
 
-    chartInstance.current = chart
-    candleSeries.current = candle
-    volumeSeries.current = volume
+      chartInstance.current = chart
+      candleSeries.current = candle
+      volumeSeries.current = volume
+    } catch (err) {
+      console.error('Failed to initialize TradingView chart:', err)
+    }
 
     // Resize observer
     const handleResize = () => {
@@ -152,7 +159,6 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
 
     const formattedCandles: CandlestickData<Time>[] = []
     const formattedVolumes: HistogramData<Time>[] = []
-
     const isDark = document.documentElement.classList.contains('dark')
 
     candles.forEach((c) => {
@@ -170,63 +176,92 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         time: timeVal,
         value: c.volume,
         color: isUp
-          ? isDark ? 'rgba(16, 185, 129, 0.25)' : 'rgba(5, 150, 105, 0.25)'
-          : isDark ? 'rgba(244, 63, 94, 0.25)' : 'rgba(225, 29, 72, 0.25)',
+          ? isDark
+            ? 'rgba(16, 185, 129, 0.25)'
+            : 'rgba(5, 150, 105, 0.25)'
+          : isDark
+          ? 'rgba(244, 63, 94, 0.25)'
+          : 'rgba(225, 29, 72, 0.25)',
       })
     })
 
-    candleSeries.current.setData(formattedCandles)
-    volumeSeries.current.setData(formattedVolumes)
+    try {
+      candleSeries.current.setData(formattedCandles)
+      volumeSeries.current.setData(formattedVolumes)
 
-    // Add horizontal price corridor lines if available
-    if (corridor && candleSeries.current) {
-      try {
-        // P05 Floor
-        candleSeries.current.createPriceLine({
-          price: corridor.p05_floor,
-          color: '#f43f5e',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          axisLabelVisible: true,
-          title: 'P05 Stop',
-        })
+      // Add horizontal price corridor lines if available
+      if (corridor && candleSeries.current) {
+        try {
+          // Remove previous price lines to avoid duplicates
+          activePriceLines.current.forEach((line) => {
+            try {
+              candleSeries.current.removePriceLine(line)
+            } catch (e) {}
+          })
+          activePriceLines.current = []
 
-        // P50 Median
-        candleSeries.current.createPriceLine({
-          price: corridor.p50_median,
-          color: '#3b82f6',
-          lineWidth: 1,
-          lineStyle: 1, // Dotted
-          axisLabelVisible: true,
-          title: 'P50 Median',
-        })
+          // P05 Floor
+          if (corridor.p05_floor && corridor.p05_floor > 0) {
+            const l = candleSeries.current.createPriceLine({
+              price: corridor.p05_floor,
+              color: '#f43f5e',
+              lineWidth: 1,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: true,
+              title: 'P05 Stop',
+            })
+            activePriceLines.current.push(l)
+          }
 
-        // P75 Target 1
-        candleSeries.current.createPriceLine({
-          price: corridor.p75_target1,
-          color: '#10b981',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          axisLabelVisible: true,
-          title: 'P75 Target 1',
-        })
+          // P50 Median
+          if (corridor.p50_median && corridor.p50_median > 0) {
+            const l = candleSeries.current.createPriceLine({
+              price: corridor.p50_median,
+              color: '#3b82f6',
+              lineWidth: 1,
+              lineStyle: 1, // Dotted
+              axisLabelVisible: true,
+              title: 'P50 Median',
+            })
+            activePriceLines.current.push(l)
+          }
 
-        // Q90 Runner Target
-        candleSeries.current.createPriceLine({
-          price: corridor.q90_runner_target,
-          color: '#f59e0b',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          axisLabelVisible: true,
-          title: 'Q90 Runner',
-        })
-      } catch (e) {
-        // ignore line creation error
+          // P75 Target 1
+          if (corridor.p75_target1 && corridor.p75_target1 > 0) {
+            const l = candleSeries.current.createPriceLine({
+              price: corridor.p75_target1,
+              color: '#10b981',
+              lineWidth: 1,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: true,
+              title: 'P75 Target 1',
+            })
+            activePriceLines.current.push(l)
+          }
+
+          // Q90 Runner Target
+          const q90 = corridor.q90_runner ?? corridor.q90_runner_target
+          if (q90 && q90 > 0) {
+            const l = candleSeries.current.createPriceLine({
+              price: q90,
+              color: '#a855f7',
+              lineWidth: 1,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: true,
+              title: 'Q90 Runner',
+            })
+            activePriceLines.current.push(l)
+          }
+        } catch (e) {
+          // ignore line creation error
+        }
       }
-    }
 
-    if (chartInstance.current) {
-      chartInstance.current.timeScale().fitContent()
+      if (chartInstance.current) {
+        chartInstance.current.timeScale().fitContent()
+      }
+    } catch (setDataErr) {
+      console.error('Error setting chart data:', setDataErr)
     }
   }, [candles, corridor])
 
@@ -234,30 +269,44 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     <div className="flex flex-col h-full glass-panel rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
       {/* Timeframe & Chart Tools Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)]">
-        <div className="flex items-center gap-1 bg-[var(--surface)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf.value}
-              onClick={() => setTimeframe(tf.value)}
-              className={`px-2.5 py-1 text-xs font-mono font-medium rounded-md transition-all ${
-                timeframe === tf.value
-                  ? 'bg-blue-600 text-white shadow-sm font-semibold'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-raised)]'
-              }`}
-            >
-              {tf.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-1 bg-[var(--surface)] p-1 rounded-xl border border-[var(--border-subtle)]">
+          {TIMEFRAMES.map((tf) => {
+            const isActive = timeframe === tf.value
+            return (
+              <button
+                key={tf.value}
+                onClick={() => setTimeframe(tf.value)}
+                className={`relative px-3 py-1 text-xs font-mono rounded-lg transition-all interactive-btn ${
+                  isActive
+                    ? 'text-blue-400 font-bold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="tf-pill-active"
+                    className="absolute inset-0 bg-blue-500/10 border border-blue-500/30 rounded-lg"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">{tf.label}</span>
+              </button>
+            )
+          })}
         </div>
 
         <div className="flex items-center gap-3 text-xs font-mono text-[var(--text-muted)]">
-          {isLoading && (
-            <div className="flex items-center gap-1.5 text-blue-500">
+          {isLoading ? (
+            <div className="flex items-center gap-1.5 text-blue-400">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span className="text-[11px]">Syncing Lakehouse...</span>
+              <span className="text-[11px]">Syncing Parquet...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>{candles.length} OHLCV Bars</span>
             </div>
           )}
-          <span>{candles.length} bars</span>
         </div>
       </div>
 

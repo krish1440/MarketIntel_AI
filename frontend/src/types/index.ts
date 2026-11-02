@@ -2,35 +2,39 @@ export interface StockSearchResult {
   symbol: string
   company_name: string
   exchange: string
-  token: string
-  isin?: string
+  token?: string | null
+  isin?: string | null
   is_top_300: boolean
 }
 
 export interface StockQuote {
   symbol: string
-  company_name: string
-  exchange: string
+  company_name?: string
+  exchange?: string
   ltp: number
-  change: number
-  change_pct: number
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
+  open?: number
+  high?: number
+  low?: number
+  close?: number
+  volume?: number
   vwap?: number | null
+  pct_change?: number
+  change?: number
+  change_pct?: number
   high_52w?: number | null
   low_52w?: number | null
-  last_updated?: string
+  updated_at?: string
 }
 
 export interface TopUniverseItem {
   symbol: string
-  company_name: string
-  turnover_20d_avg_cr: number
-  current_price: number
-  change_pct: number
+  company_name?: string
+  price?: number
+  current_price?: number
+  turnover_20d_cr?: number
+  turnover_20d_avg_cr?: number
+  pct_change?: number
+  change_pct?: number
   rank: number
 }
 
@@ -38,9 +42,9 @@ export interface MarketBreadth {
   advances: number
   declines: number
   unchanged: number
-  total: number
-  advance_decline_ratio: number
-  timestamp: string
+  adv_dec_ratio?: number
+  advance_decline_ratio?: number
+  timestamp?: string
 }
 
 export interface CandleItem {
@@ -50,25 +54,16 @@ export interface CandleItem {
   low: number
   close: number
   volume: number
-  vwap?: number | null
 }
 
-export interface ChartResponse {
+export interface ChartCandlesResponse {
   symbol: string
   timeframe: string
-  candles_count: number
+  count: number
   candles: CandleItem[]
 }
 
-export interface ScreenerCandidateItem {
-  rank: number
-  symbol: string
-  company_name: string
-  sector: string
-  turnover_20d_cr: number
-  gap_pct: number
-  conviction_score: number
-}
+export type ChartResponse = ChartCandlesResponse
 
 export interface CorridorForecast {
   symbol: string
@@ -77,22 +72,43 @@ export interface CorridorForecast {
   p25_lower: number
   p50_median: number
   p75_target1: number
-  q90_runner_target: number
-  volatility_band_pct: number
-  forecast_time: string
+  q90_runner: number
+  q90_runner_target?: number
+  corridor_width_pct: number
+  volatility_band_pct?: number
+  asymmetry_ratio: number
+}
+
+export interface ScreenerCandidateItem {
+  rank: number
+  symbol: string
+  current_price: number
+  rank_score: number
+  conviction_score?: number
+  action: string
+  confidence_pct: number
+  turnover_cr: number
+  turnover_20d_cr?: number
+  gap_pct?: number
+  sector?: string
 }
 
 export interface AISignalResponse {
   symbol: string
-  action: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'AVOID'
-  calibrated_probability: number
-  raw_probability: number
-  regime: string
-  stop_loss_price: number
-  target_1_price: number
-  target_2_price: number
+  action: string
+  confidence_pct: number
+  calibrated_probability?: number
+  current_price: number
+  recommended_entry: number
+  dynamic_stop_loss: number
+  stop_loss_price?: number
+  target_1: number
+  target_1_price?: number
+  target_2: number
+  target_2_price?: number
   risk_reward_ratio: number
-  timestamp: string
+  regime?: string
+  generated_at: string
 }
 
 export interface PortfolioSummaryResponse {
@@ -145,27 +161,30 @@ export interface TradeItem {
   exit_trigger: string
 }
 
+export interface ManualOrderRequest {
+  symbol: string
+  direction: 'BUY' | 'SELL'
+  quantity?: number
+  price?: number
+}
+
+export interface ManualOrderResponse {
+  order_id: string
+  status: string
+  symbol: string
+  direction: string
+  quantity: number
+  filled_price: number
+  total_value: number
+  execution_mode: string
+}
+
 export interface SystemHealth {
   status: string
-  timestamp: string
+  uptime_seconds: number
   memory_rss_mb: number
-  market: {
-    is_market_open: boolean
-    session_state: string
-    ist_time: string
-    weekday: string
-  }
   redis_connected: boolean
-  lakehouse: {
-    base_exists: boolean
-    silver_1d_stocks: number
-    silver_1m_stocks: number
-    gold_features_exists: boolean
-  }
-  execution: {
-    mode: string
-    open_positions: number
-    circuit_breaker_tripped: boolean
-    orchestrator_running: boolean
-  }
+  duckdb_active: boolean
+  lakehouse_records_parity: boolean
+  active_background_tasks: number
 }

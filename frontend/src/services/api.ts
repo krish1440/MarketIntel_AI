@@ -87,6 +87,11 @@ export const api = {
       method: 'POST',
     }),
 
+  resetPortfolio: (initialCapital = 1000000) =>
+    request<{ status: string; message: string; cash: number }>(`/trading/reset?initial_capital=${initialCapital}`, {
+      method: 'POST',
+    }),
+
   // System & Engine Operations
   getSystemHealth: () =>
     request<SystemHealth>('/system/health'),
@@ -96,3 +101,4 @@ export const api = {
       method: 'POST',
     }),
 }
+
