@@ -281,3 +281,40 @@ def close_position(
         "net_pnl_pct": settlement.net_pnl_pct,
         "exit_trigger": settlement.exit_trigger
     }
+
+
+@router.post("/reset")
+def reset_portfolio_ledger(
+    initial_capital: float = 1000000.0,
+    services: ServiceContainer = Depends(get_services)
+):
+    """
+    Resets the paper trading portfolio back to a clean state:
+    Deletes all active positions, trade history, orders, and restores cash to initial_capital.
+    """
+    pm = services.portfolio_manager
+    pm.positions.clear()
+    pm.cash = float(initial_capital)
+    pm.peak_portfolio_value = float(initial_capital)
+    pm.day_start_portfolio_value = float(initial_capital)
+    pm.circuit_breaker_tripped = False
+
+    with sqlite3.connect(pm.db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM active_positions")
+        cursor.execute("DELETE FROM trade_history")
+        cursor.execute("DELETE FROM orders")
+        cursor.execute("DELETE FROM portfolio_state")
+        cursor.execute("INSERT INTO portfolio_state (key, value) VALUES ('cash', ?)", (str(initial_capital),))
+        cursor.execute("INSERT INTO portfolio_state (key, value) VALUES ('peak_portfolio_value', ?)", (str(initial_capital),))
+        cursor.execute("INSERT INTO portfolio_state (key, value) VALUES ('day_start_value', ?)", (str(initial_capital),))
+        conn.commit()
+
+    return {
+        "status": "RESET_SUCCESS",
+        "message": f"Portfolio reset to fresh Rs. {initial_capital:,.2f} INR balance. All trade history cleared.",
+        "cash": initial_capital,
+        "positions_count": 0,
+        "trades_count": 0
+    }
+
