@@ -179,6 +179,17 @@ class GapOrchestrator:
             logger.info(f"[STEP 3] Syncing 1-Minute historical bars for top {max_1m_symbols} dynamic leaders...")
             self.sync_1m_gaps(top_symbols, max_symbols=max_1m_symbols)
 
+            # Step 4: If market is already closed (after 15:30 IST), run post-market 1M batch for remaining stocks
+            now_ist = datetime.now(IST)
+            if now_ist.weekday() < 5 and now_ist.time() >= dtime(15, 30):
+                logger.info("[STEP 4] Market is CLOSED for today. Running post-market 1-Minute batch backfill across remaining stocks...")
+                try:
+                    from src.crawler.eod_intraday_batch import EODIntradayBatchWorker
+                    batch_worker = EODIntradayBatchWorker(exchange=self.exchange)
+                    batch_worker.run_batch_sync(max_hours=1.0)
+                except Exception as e:
+                    logger.warning(f"Post-market 1m batch notice: {e}")
+
             logger.info("=" * 75)
             logger.info(f"DUAL-ENGINE GAP BACKFILL COMPLETED SUCCESSFULLY ({mode_str})")
             logger.info("=" * 75)
