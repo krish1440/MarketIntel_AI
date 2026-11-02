@@ -30,10 +30,11 @@ echo   [1] Start Live Paper Trading Engine (Premarket 09:08 AM -> 03:30 PM)
 echo   [2] Run EOD Data Ingestion Pipeline (Silver -> Gold Lakehouse Update)
 echo   [3] Run Weekend Walk-Forward MLOps Model Retraining Tournament
 echo   [4] Run Full 2-Year Out-Of-Sample Vault Simulation Audit
-echo   [5] Exit
+echo   [5] Start FastAPI REST & WebSocket Backend Server (Port 8000)
+echo   [6] Exit
 echo.
 echo ===============================================================================
-set /p choice="Enter choice [1-5]: "
+set /p choice="Enter choice [1-6]: "
 
 if "%choice%"=="1" (
     echo.
@@ -68,9 +69,17 @@ if "%choice%"=="4" (
 )
 
 if "%choice%"=="5" (
+    echo.
+    echo Launching FastAPI REST & WebSocket Backend Server...
+    python scripts\run_server.py
+    pause
+    goto MENU
+)
+
+if "%choice%"=="6" (
     exit /b 0
 )
 
-echo Invalid choice. Please enter a number between 1 and 5.
+echo Invalid choice. Please enter a number between 1 and 6.
 timeout /t 2 >nul
 goto MENU

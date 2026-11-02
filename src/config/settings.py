@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     SILVER_DIR: Path = LAKEHOUSE_DIR / "silver"
     GOLD_DIR: Path = LAKEHOUSE_DIR / "gold"
     
+    # Execution & Trading
+    EXECUTION_MODE: str = os.getenv("EXECUTION_MODE", "PAPER")
+    
     # Redis
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))

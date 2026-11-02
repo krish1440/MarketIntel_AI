@@ -170,3 +170,16 @@ class RedisManager:
         """Broadcasts tick event over pubsub channel."""
         channel = f"ticks:{exchange}:{symbol}"
         self.client.publish(channel, tick)
+
+    def get_live_quote(self, symbol: str, exchange: str = "NSE") -> Dict[str, Any]:
+        """Convenience method to retrieve live ticker quote for a symbol."""
+        return self.get_quote(exchange, symbol)
+
+    def is_alive(self) -> bool:
+        """Checks if backing broker (Redis or in-memory) is active."""
+        if self.is_connected:
+            try:
+                return bool(self.client.ping())
+            except Exception:
+                return False
+        return True
