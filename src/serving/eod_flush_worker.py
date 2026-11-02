@@ -60,7 +60,40 @@ class EODFlushWorker:
             merged_df = new_df.sort("timestamp")
 
         merged_df.write_parquet(target_file, compression="zstd")
+
+        # Automatically Resample 1M to 5M Silver Lakehouse
+        try:
+            self._resample_to_5m(merged_df, symbol, exchange)
+        except Exception as e:
+            logger.warning(f"Could not auto-resample 5m for {symbol}: {e}")
+
         return len(new_df)
+
+    def _resample_to_5m(self, df_1m: pl.DataFrame, symbol: str, exchange: str = "NSE"):
+        """Vectorized on-the-fly resampling from 1m to 5m in Polars."""
+        if len(df_1m) == 0:
+            return
+        dir_5m = settings.SILVER_DIR / "ohlcv_5m" / f"exchange={exchange}" / f"symbol={symbol}"
+        dir_5m.mkdir(parents=True, exist_ok=True)
+        file_5m = dir_5m / "data.parquet"
+
+        time_col = "timestamp" if "timestamp" in df_1m.columns else "date"
+        df_5m = (
+            df_1m.group_by_dynamic(time_col, every="5m")
+            .agg([
+                pl.col("open").first(),
+                pl.col("high").max(),
+                pl.col("low").min(),
+                pl.col("close").last(),
+                pl.col("volume").sum(),
+                pl.lit(symbol).alias("symbol"),
+                pl.lit(exchange).alias("exchange")
+            ])
+            .drop_nulls()
+        )
+        temp_5m = file_5m.with_suffix(".tmp")
+        df_5m.write_parquet(temp_5m, compression="zstd")
+        temp_5m.replace(file_5m)
 
     def flush_all_symbols(self, symbols: List[str], exchange: str = "NSE") -> int:
         """Flushes all symbols in the universe."""
