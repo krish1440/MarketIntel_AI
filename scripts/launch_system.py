@@ -64,6 +64,7 @@ class MarketIntelSystem:
         self.portfolio_mgr = None
         self.strategy_runner = None
         self.governance_engine = None
+        self.live_ws = None
 
         # State tracking to prevent duplicate actions on same day
         self.last_screener_date: Optional[date] = None
@@ -222,6 +223,21 @@ class MarketIntelSystem:
                 # -------------------------------------------------------------
                 # 5. OPENING BELL & 15m ORB OBSERVATION (09:15 to 09:30 IST)
                 # -------------------------------------------------------------
+                if regime in (MarketRegime.ORB_OBSERVATION, MarketRegime.ACTIVE_TRADING):
+                    # Start Live Angel WebSocket if not already active
+                    if self.live_ws is None:
+                        try:
+                            from src.broker.angel_websocket import AngelLiveWebSocket
+                            from src.serving.streaming_aggregator import StreamingAggregator
+                            self.streaming_aggregator = StreamingAggregator(redis_mgr=self.redis_mgr)
+                            self.live_ws = AngelLiveWebSocket(streaming_aggregator=self.streaming_aggregator)
+                            if self.live_ws.connect():
+                                watch_syms = [c.symbol for c in self.strategy_runner.focus_watchlist] or ["RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN", "BHARTIARTL", "LT"]
+                                self.live_ws.subscribe_symbols(watch_syms, mode=2)
+                                logger.info(f"[LIVE STREAM ACTIVE] Subscribed to {len(watch_syms)} stocks on Angel One SmartWebSocketV2.")
+                        except Exception as e:
+                            logger.error(f"Live WebSocket startup notice: {e}")
+
                 if regime == MarketRegime.ORB_OBSERVATION:
                     if heartbeats % 3 == 1:
                         logger.info(f"[{time_str} IST] [{regime}] Market OPEN. Tracking 15-Minute Opening Range Breakout (ORB) & VWAP...")
@@ -245,6 +261,9 @@ class MarketIntelSystem:
                 # 7. MARKET CLOSE SETTLEMENT (15:30 to 16:00 IST)
                 # -------------------------------------------------------------
                 if regime == MarketRegime.MARKET_CLOSE:
+                    if self.live_ws:
+                        self.live_ws.close()
+                        self.live_ws = None
                     logger.info(f"[{time_str} IST] [MARKET CLOSE] Closing bells rung. Flushing RAM intraday candles to Silver & persisting daily portfolio state...")
                     self.portfolio_mgr._persist_state()
                     try:
