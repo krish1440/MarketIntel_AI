@@ -219,3 +219,4 @@ This document defines the functional capabilities, tabs, controls, data inputs, 
   - **Stop-Loss Hit Event**: Warning notification when a position is stopped out.
   - **Runner Target Hit Event**: Profit booking notification when Model 1 $Q_{90}$ is reached.
   - **Circuit Breaker Halt Alert**: Critical notification if the portfolio hits -3% daily drawdown and halts new entries.
+
