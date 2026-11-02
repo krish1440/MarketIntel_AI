@@ -94,6 +94,7 @@ class AngelLiveWebSocket:
             self.sws.on_data = self._on_data
             self.sws.on_error = self._on_error
             self.sws.on_close = self._on_close
+            self.sws._on_close = lambda wsapp, *args, **kwargs: self._on_close(wsapp, *args, **kwargs)
 
             # Run in background daemon thread so application remains non-blocking
             self.ws_thread = threading.Thread(target=self.sws.connect, daemon=True, name="AngelWebSocketThread")
