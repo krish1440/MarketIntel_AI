@@ -36,3 +36,4 @@ class MarketBreadth(BaseModel):
     unchanged: int
     adv_dec_ratio: float
     timestamp: str
+

@@ -36,3 +36,4 @@ class ServiceContainer:
 
 def get_services() -> ServiceContainer:
     return ServiceContainer.get_instance()
+

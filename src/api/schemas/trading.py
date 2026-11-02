@@ -53,3 +53,4 @@ class ManualOrderRequest(BaseModel):
     direction: str = Field(default="BUY", description="BUY or SELL")
     quantity: Optional[int] = Field(None, description="Shares quantity, or auto-sized if None")
     price: Optional[float] = Field(None, description="Limit price or Market price if None")
+

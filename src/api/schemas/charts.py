@@ -15,3 +15,4 @@ class ChartResponse(BaseModel):
     timeframe: str
     candles_count: int
     candles: List[CandleItem]
+

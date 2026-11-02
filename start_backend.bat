@@ -21,3 +21,4 @@ echo.
 echo Launching Uvicorn Server at http://127.0.0.1:8000 ...
 python scripts\run_server.py
 pause
+

@@ -32,3 +32,4 @@ class AISignalResponse(BaseModel):
     target_2: float
     risk_reward_ratio: float
     generated_at: str
+

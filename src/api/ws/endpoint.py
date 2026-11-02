@@ -54,3 +54,4 @@ async def websocket_trade_alerts(websocket: WebSocket):
     except Exception as e:
         logger.debug(f"Trade WebSocket error: {e}")
         ws_manager.disconnect(websocket, channel="trades")
+

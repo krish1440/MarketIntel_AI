@@ -55,3 +55,4 @@ class ConnectionManager:
 
 # Global singleton
 ws_manager = ConnectionManager()
+

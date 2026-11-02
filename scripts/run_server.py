@@ -15,3 +15,4 @@ if __name__ == "__main__":
     print("   WebSockets Live Stream:   ws://127.0.0.1:8000/ws/live")
     print("=" * 70)
     uvicorn.run("src.api.main:app", host="127.0.0.1", port=8000, reload=True)
+

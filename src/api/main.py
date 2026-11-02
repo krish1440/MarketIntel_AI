@@ -88,3 +88,4 @@ def root_status():
             "websockets": "/ws"
         }
     }
+
