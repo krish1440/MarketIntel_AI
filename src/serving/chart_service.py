@@ -21,17 +21,21 @@ class ChartService:
         self.redis = redis_mgr or RedisManager()
         self.silver_ohlcv_1m_base = settings.SILVER_DIR / "ohlcv_1m" / "exchange=NSE"
         self.silver_ohlcv_1d_base = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE"
+        self._intraday_gap_syncer = None
+        self._daily_syncer = None
 
     def get_candlesticks(
         self,
         symbol: str,
         timeframe: str = "1m",
         limit: int = 500,
-        exchange: str = "NSE"
+        exchange: str = "NSE",
+        auto_backfill: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Retrieves seamless, unified candlestick history in under 30 milliseconds.
         timeframe: '1m', '5m', '1d'
+        auto_backfill: When True (default), lazily checks and fills missing gaps on-the-fly.
         Returns TradingView-compliant list of candle dictionaries:
         [{'time': epoch_sec, 'open': float, 'high': float, 'low': float, 'close': float, 'volume': int}]
         """
@@ -41,6 +45,17 @@ class ChartService:
         if timeframe == "1d":
             # 1. Daily Candles: Query Silver Lakehouse 1D via DuckDB
             file_path = str(self.silver_ohlcv_1d_base / f"symbol={symbol}" / "data.parquet").replace("\\", "/")
+            
+            # Lazy backfill if file missing or requested
+            if auto_backfill:
+                if self._daily_syncer is None:
+                    from src.crawler.daily_sync import DailySyncer
+                    self._daily_syncer = DailySyncer(exchange=exchange)
+                try:
+                    self._daily_syncer.sync_symbol(symbol)
+                except Exception as e:
+                    logger.debug(f"On-demand 1d check for {symbol}: {e}")
+
             if Path(file_path).exists():
                 try:
                     query = f"""
@@ -73,6 +88,20 @@ class ChartService:
         elif timeframe in ["1m", "5m"]:
             # 2. Intraday 1m/5m Candles: Query Historical Parquet + Live RAM
             file_path = str(self.silver_ohlcv_1m_base / f"symbol={symbol}" / "data.parquet").replace("\\", "/")
+
+            # Lazy On-Demand Gap Backfill for 1-minute data
+            if auto_backfill:
+                if self._intraday_gap_syncer is None:
+                    from src.crawler.intraday_gap_syncer import IntradayGapSyncer
+                    self._intraday_gap_syncer = IntradayGapSyncer(exchange=exchange)
+                try:
+                    gap = self._intraday_gap_syncer.detect_gap(symbol)
+                    if gap:
+                        logger.info(f"[LAZY ON-DEMAND 1M] Backfilling gap for {symbol} ({gap[0]} to {gap[1]})...")
+                        self._intraday_gap_syncer.sync_symbol(symbol)
+                except Exception as e:
+                    logger.debug(f"Lazy 1m sync notice for {symbol}: {e}")
+
             if Path(file_path).exists():
                 try:
                     query = f"""

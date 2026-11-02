@@ -186,19 +186,23 @@ class AngelLiveWebSocket:
             logger.info(f"Queued {len(tokens)} tokens for subscription once connected.")
 
     def _do_subscribe(self, tokens: List[str], mode: int = 2):
-        """Executes subscription payload on active connection."""
-        correlation_id = f"MKT_{int(time.time())}"[-10:]
-        token_payload = [
-            {
-                "exchangeType": 1,  # 1 = NSE_CM
-                "tokens": tokens
-            }
-        ]
-        try:
-            self.sws.subscribe(correlation_id=correlation_id, mode=mode, token_list=token_payload)
-            logger.info(f"Subscribed to {len(tokens)} symbols on live feed (Mode: {mode}).")
-        except Exception as e:
-            logger.error(f"Failed to subscribe tokens: {e}")
+        """Executes subscription payload in safe batches of 50 tokens to avoid socket buffer overflow."""
+        chunk_size = 50
+        for i in range(0, len(tokens), chunk_size):
+            chunk = tokens[i:i + chunk_size]
+            correlation_id = f"MKT_{int(time.time())}_{i}"[-10:]
+            token_payload = [
+                {
+                    "exchangeType": 1,  # 1 = NSE_CM
+                    "tokens": chunk
+                }
+            ]
+            try:
+                self.sws.subscribe(correlation_id=correlation_id, mode=mode, token_list=token_payload)
+                logger.info(f"Subscribed chunk of {len(chunk)} symbols (Mode: {mode}) [{i + len(chunk)}/{len(tokens)}].")
+                time.sleep(0.1)
+            except Exception as e:
+                logger.error(f"Failed to subscribe token chunk: {e}")
 
     def close(self):
         """Gracefully disconnects WebSocket."""

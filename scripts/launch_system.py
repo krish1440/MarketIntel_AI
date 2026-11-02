@@ -255,9 +255,15 @@ class MarketIntelSystem:
                             self.streaming_aggregator = StreamingAggregator(redis_mgr=self.redis_mgr)
                             self.live_ws = AngelLiveWebSocket(streaming_aggregator=self.streaming_aggregator)
                             if self.live_ws.connect():
-                                watch_syms = [c.symbol for c in self.strategy_runner.focus_watchlist] or ["RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN", "BHARTIARTL", "LT"]
-                                self.live_ws.subscribe_symbols(watch_syms, mode=2)
-                                logger.info(f"[LIVE STREAM ACTIVE] Subscribed to {len(watch_syms)} stocks on Angel One SmartWebSocketV2.")
+                                watch_syms = [c.symbol for c in self.strategy_runner.focus_watchlist]
+                                open_pos = list(self.portfolio_mgr.positions.keys())
+                                top_leaders = self.gap_orchestrator.get_target_universe(limit=70) if self.gap_orchestrator else ["RELIANCE", "TCS", "INFY", "HDFCBANK", "SBIN", "BHARTIARTL", "LT"]
+                                full_subscribe_list = list(dict.fromkeys(watch_syms + open_pos + top_leaders))[:100]
+                                self.live_ws.subscribe_symbols(full_subscribe_list, mode=2)
+                                logger.info(
+                                    f"[LIVE STREAM ACTIVE] Dynamically subscribed to {len(full_subscribe_list)} scrips "
+                                    f"(Watchlist={len(watch_syms)}, Positions={len(open_pos)}, Leaders={len(top_leaders)})."
+                                )
                         except Exception as e:
                             logger.error(f"Live WebSocket startup notice: {e}")
 
@@ -308,10 +314,20 @@ class MarketIntelSystem:
                     if self.last_eod_sync_date != today_date:
                         logger.info(f"[{time_str} IST] [04:00 PM EOD PIPELINE] Fetching today's completed daily bars & updating Gold Feature Lakehouse...")
                         try:
-                            run_eod_pipeline(universe_mode="top300")
-                            logger.info("EOD Ingestion & Feature Refresh Completed Successfully!")
+                            run_eod_pipeline(universe_mode="all")
+                            logger.info("EOD 1D Ingestion & Feature Refresh Completed Successfully!")
                         except Exception as e:
                             logger.error(f"EOD Pipeline Error: {e}")
+
+                        # Option 1: Trigger Post-Market Full-Universe 1M Batch Ingestion
+                        try:
+                            logger.info(f"[{time_str} IST] [04:30 PM BATCH] Starting Full-Universe 1-Minute historical backfill across remaining stocks...")
+                            from src.crawler.eod_intraday_batch import EODIntradayBatchWorker
+                            batch_worker = EODIntradayBatchWorker()
+                            batch_worker.run_batch_sync(max_hours=1.5)
+                        except Exception as e:
+                            logger.error(f"EOD 1M Batch Ingestion Error: {e}")
+
                         self.last_eod_sync_date = today_date
                     else:
                         if heartbeats % 6 == 1:
