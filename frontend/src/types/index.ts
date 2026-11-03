@@ -17,6 +17,7 @@ export interface StockQuote {
   high?: number
   low?: number
   close?: number
+  prev_close?: number
   volume?: number
   vwap?: number | null
   pct_change?: number

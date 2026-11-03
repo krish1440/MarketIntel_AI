@@ -187,7 +187,7 @@ export const App: React.FC = () => {
         <div className="lg:col-span-8 flex flex-col gap-3 md:gap-4">
           {/* Candlestick Chart Pane with Dynamic Sizing */}
           <div className="h-[490px] md:h-[530px] flex flex-col">
-            <TradingViewChart symbol={activeSymbol} corridor={corridor} quote={quote} />
+            <TradingViewChart symbol={activeSymbol} corridor={corridor} quote={quote} signal={signal} />
           </div>
 
           {/* Execution & Risk Governance Pane */}

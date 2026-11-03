@@ -10,22 +10,21 @@ import {
   LineData,
   Time
 } from 'lightweight-charts'
-import { CandleItem, CorridorForecast, StockQuote } from '../../types'
+import { CandleItem, CorridorForecast, StockQuote, AISignalResponse } from '../../types'
 import { api } from '../../services/api'
 import { wsService } from '../../services/websocket'
-import { Loader2, TrendingUp, Layers, Eye, Activity, Sparkles, Clock } from 'lucide-react'
+import { Loader2, TrendingUp, Layers, Eye, Activity, Sparkles, Clock, Target, ShieldAlert, Sliders } from 'lucide-react'
 
 interface TradingViewChartProps {
   symbol: string
   corridor: CorridorForecast | null
   quote?: StockQuote | null
+  signal?: AISignalResponse | null
 }
 
 const TIMEFRAMES = [
   { label: '1m', value: '1m' },
   { label: '5m', value: '5m' },
-  { label: '15m', value: '15m' },
-  { label: '1h', value: '1h' },
   { label: '1D', value: '1d' },
 ]
 
@@ -68,7 +67,30 @@ function computeVWAP(candles: CandleItem[]): LineData<Time>[] {
   return result
 }
 
-export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corridor, quote }) => {
+function computeBollingerBands(candles: CandleItem[], period = 20, multiplier = 2): {
+  upper: LineData<Time>[]
+  lower: LineData<Time>[]
+  middle: LineData<Time>[]
+} {
+  const upper: LineData<Time>[] = []
+  const lower: LineData<Time>[] = []
+  const middle: LineData<Time>[] = []
+
+  for (let i = period - 1; i < candles.length; i++) {
+    const slice = candles.slice(i - period + 1, i + 1)
+    const mean = slice.reduce((acc, c) => acc + c.close, 0) / period
+    const variance = slice.reduce((acc, c) => acc + Math.pow(c.close - mean, 2), 0) / period
+    const stdDev = Math.sqrt(variance)
+    const timeVal = candles[i].time as Time
+
+    middle.push({ time: timeVal, value: Number(mean.toFixed(2)) })
+    upper.push({ time: timeVal, value: Number((mean + multiplier * stdDev).toFixed(2)) })
+    lower.push({ time: timeVal, value: Number((mean - multiplier * stdDev).toFixed(2)) })
+  }
+  return { upper, lower, middle }
+}
+
+export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corridor, quote, signal }) => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null)
   const chartInstance = useRef<IChartApi | null>(null)
   const candleSeries = useRef<any>(null)
@@ -76,16 +98,28 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
   const ema20Series = useRef<any>(null)
   const ema50Series = useRef<any>(null)
   const vwapSeries = useRef<any>(null)
+  const bbUpperSeries = useRef<any>(null)
+  const bbLowerSeries = useRef<any>(null)
   const activePriceLines = useRef<any[]>([])
 
   const [timeframe, setTimeframe] = useState<string>('5m')
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isLoadingPast, setIsLoadingPast] = useState<boolean>(false)
   const [candles, setCandles] = useState<CandleItem[]>([])
+
+  const candlesRef = useRef<CandleItem[]>([])
+  candlesRef.current = candles
+
+  const isLoadingPastRef = useRef<boolean>(false)
+  const hasMorePastRef = useRef<boolean>(true)
 
   // Technical Indicators Toggles
   const [showEMA20, setShowEMA20] = useState<boolean>(true)
   const [showEMA50, setShowEMA50] = useState<boolean>(false)
   const [showVWAP, setShowVWAP] = useState<boolean>(true)
+  const [showBB, setShowBB] = useState<boolean>(false)
+  const [showSR, setShowSR] = useState<boolean>(false)
+  const [showAIPosition, setShowAIPosition] = useState<boolean>(true)
 
   // Floating Crosshair Hover Legend
   const [hoverData, setHoverData] = useState<{
@@ -97,7 +131,13 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     volume?: number
   } | null>(null)
 
-  // Load candle data from backend
+  // Reset pagination state when symbol or timeframe changes
+  useEffect(() => {
+    hasMorePastRef.current = true
+    isLoadingPastRef.current = false
+  }, [symbol, timeframe])
+
+  // Initial Load candle data from backend
   const loadCandles = async (sym: string, tf: string) => {
     setIsLoading(true)
     try {
@@ -124,7 +164,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     }
   }, [symbol, quote?.ltp, candles])
 
-  // Initialize and update Lightweight Charts with precision height sizing
+  // Initialize Lightweight Charts with institutional precision
   useEffect(() => {
     if (!chartContainerRef.current) return
 
@@ -133,7 +173,6 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     const textColor = isDark ? '#94a3b8' : '#475569'
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)'
 
-    // Clear existing chart
     if (chartInstance.current) {
       chartInstance.current.remove()
       chartInstance.current = null
@@ -165,6 +204,21 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
             top: 0.1,
             bottom: 0.22, // Space for volume
           },
+          autoScale: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: {
+            time: true,
+            price: true, // Smooth TradingView vertical price drag
+          },
+          mouseWheel: true,
+          pinch: true,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true, // Smooth chart panning
+          horzTouchDrag: true,
+          vertTouchDrag: true,
         },
         localization: {
           locale: 'en-IN',
@@ -175,7 +229,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
               timeZone: 'Asia/Kolkata',
               hour: '2-digit',
               minute: '2-digit',
-              hour12: false,
+              hour12: true,
             }) + ' IST'
           },
         },
@@ -202,7 +256,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         },
       })
 
-      // Candlestick Series (Lightweight Charts v5)
+      // Candlestick Series
       const candle = chart.addSeries(CandlestickSeries, {
         upColor: isDark ? '#10b981' : '#059669',
         downColor: isDark ? '#f43f5e' : '#e11d48',
@@ -216,12 +270,12 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         priceFormat: {
           type: 'volume',
         },
-        priceScaleId: '', // Overlay over price scale
+        priceScaleId: '',
       })
 
       volume.priceScale().applyOptions({
         scaleMargins: {
-          top: 0.78, // Align volume to bottom 22%
+          top: 0.78,
           bottom: 0,
         },
       })
@@ -248,6 +302,20 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         crosshairMarkerVisible: false,
       })
 
+      const bbUpper = chart.addSeries(LineSeries, {
+        color: 'rgba(59, 130, 246, 0.45)',
+        lineWidth: 1,
+        title: 'BB Upper',
+        crosshairMarkerVisible: false,
+      })
+
+      const bbLower = chart.addSeries(LineSeries, {
+        color: 'rgba(59, 130, 246, 0.45)',
+        lineWidth: 1,
+        title: 'BB Lower',
+        crosshairMarkerVisible: false,
+      })
+
       // Floating Crosshair Move Listener
       chart.subscribeCrosshairMove((param) => {
         if (param.time && candle) {
@@ -266,12 +334,47 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         setHoverData(null)
       })
 
+      // Infinite Past Scroll: Fetch older candles when user scrolls near left boundary
+      chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
+        if (!logicalRange) return
+        if (
+          logicalRange.from < 5 &&
+          !isLoadingPastRef.current &&
+          hasMorePastRef.current &&
+          candlesRef.current.length > 0
+        ) {
+          isLoadingPastRef.current = true
+          setIsLoadingPast(true)
+          const earliestTime = candlesRef.current[0].time
+          try {
+            const res = await api.getChartCandles(symbol, timeframe, 500, earliestTime)
+            if (res.candles && res.candles.length > 0) {
+              const older = res.candles.filter((c) => c.time < earliestTime)
+              if (older.length > 0) {
+                setCandles((prev) => [...older, ...prev])
+              } else {
+                hasMorePastRef.current = false
+              }
+            } else {
+              hasMorePastRef.current = false
+            }
+          } catch (err) {
+            console.error('Failed to load past candles:', err)
+          } finally {
+            isLoadingPastRef.current = false
+            setIsLoadingPast(false)
+          }
+        }
+      })
+
       chartInstance.current = chart
       candleSeries.current = candle
       volumeSeries.current = volume
       ema20Series.current = ema20
       ema50Series.current = ema50
       vwapSeries.current = vwap
+      bbUpperSeries.current = bbUpper
+      bbLowerSeries.current = bbLower
     } catch (err) {
       console.error('Failed to initialize TradingView chart:', err)
     }
@@ -347,81 +450,209 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
       if (vwapSeries.current) {
         vwapSeries.current.setData(showVWAP ? computeVWAP(candles) : [])
       }
+      if (bbUpperSeries.current && bbLowerSeries.current) {
+        if (showBB) {
+          const bb = computeBollingerBands(candles, 20, 2)
+          bbUpperSeries.current.setData(bb.upper)
+          bbLowerSeries.current.setData(bb.lower)
+        } else {
+          bbUpperSeries.current.setData([])
+          bbLowerSeries.current.setData([])
+        }
+      }
 
-      // Add horizontal price corridor lines if available
-      if (corridor && candleSeries.current) {
+      // Clear previous price lines
+      activePriceLines.current.forEach((line) => {
         try {
-          // Remove previous price lines to avoid duplicates
-          activePriceLines.current.forEach((line) => {
-            try {
-              candleSeries.current.removePriceLine(line)
-            } catch (e) {}
-          })
-          activePriceLines.current = []
+          candleSeries.current.removePriceLine(line)
+        } catch (e) {}
+      })
+      activePriceLines.current = []
 
-          // P05 Floor
-          if (corridor.p05_floor && corridor.p05_floor > 0) {
+      // If showAIPosition is OFF, do not draw any target/corridor lines and clear markers
+      if (!showAIPosition) {
+        if (candleSeries.current) {
+          candleSeries.current.setMarkers([])
+        }
+        return
+      }
+
+      const curPrice = quote?.ltp || (candles.length > 0 ? candles[candles.length - 1].close : 0)
+
+      // 1. AI Position Box Overlay (Entry, Target 1, Runner Target 2, Stop Loss)
+      if (signal && curPrice > 0 && candleSeries.current) {
+        try {
+          const entryPx = signal.recommended_entry || curPrice
+
+          // Entry Level
+          const entryLine = candleSeries.current.createPriceLine({
+            price: entryPx,
+            color: '#3b82f6',
+            lineWidth: 1,
+            lineStyle: 1, // Dotted
+            axisLabelVisible: true,
+            title: `ENTRY: ₹${entryPx.toFixed(2)}`,
+          })
+          activePriceLines.current.push(entryLine)
+
+          // Target 1 Level
+          if (signal.target_1 && signal.target_1 > 0) {
+            const diffPct = (((signal.target_1 - entryPx) / entryPx) * 100).toFixed(1)
+            const t1Line = candleSeries.current.createPriceLine({
+              price: signal.target_1,
+              color: '#10b981',
+              lineWidth: 2,
+              lineStyle: 0, // Solid
+              axisLabelVisible: true,
+              title: `TGT 1: ₹${signal.target_1.toFixed(2)} (${Number(diffPct) >= 0 ? '+' : ''}${diffPct}%)`,
+            })
+            activePriceLines.current.push(t1Line)
+          }
+
+          // Runner Target 2 Level
+          if (signal.target_2 && signal.target_2 > 0) {
+            const diffPct2 = (((signal.target_2 - entryPx) / entryPx) * 100).toFixed(1)
+            const t2Line = candleSeries.current.createPriceLine({
+              price: signal.target_2,
+              color: '#8b5cf6',
+              lineWidth: 1,
+              lineStyle: 2, // Dashed
+              axisLabelVisible: true,
+              title: `RUNNER: ₹${signal.target_2.toFixed(2)} (${Number(diffPct2) >= 0 ? '+' : ''}${diffPct2}%)`,
+            })
+            activePriceLines.current.push(t2Line)
+          }
+
+          // Dynamic Stop Loss Level
+          if (signal.dynamic_stop_loss && signal.dynamic_stop_loss > 0) {
+            const diffSlPct = (((signal.dynamic_stop_loss - entryPx) / entryPx) * 100).toFixed(1)
+            const slLine = candleSeries.current.createPriceLine({
+              price: signal.dynamic_stop_loss,
+              color: '#f43f5e',
+              lineWidth: 2,
+              lineStyle: 0, // Solid
+              axisLabelVisible: true,
+              title: `STOP LOSS: ₹${signal.dynamic_stop_loss.toFixed(2)} (${diffSlPct}%)`,
+            })
+            activePriceLines.current.push(slLine)
+          }
+        } catch (posErr) {
+          console.error('Error drawing AI position box lines:', posErr)
+        }
+      }
+
+      // 2. Horizontal Quant Corridor Levels (Clamped defensively to prevent scale distortion)
+      if (corridor && candleSeries.current && curPrice > 0 && !signal) {
+        try {
+          // Only draw corridor lines if within +-25% on intraday to maintain pristine chart scale
+          const isWithinIntradayRange = (val: number) => {
+            if (timeframe === '1d') return true
+            return Math.abs(val - curPrice) / curPrice <= 0.25
+          }
+
+          if (corridor.p05_floor && isWithinIntradayRange(corridor.p05_floor)) {
             const l = candleSeries.current.createPriceLine({
               price: corridor.p05_floor,
               color: '#f43f5e',
               lineWidth: 1,
-              lineStyle: 2, // Dashed
+              lineStyle: 2,
               axisLabelVisible: true,
-              title: 'P05 Stop',
+              title: 'P05 Quant Stop',
             })
             activePriceLines.current.push(l)
           }
 
-          // P50 Median
-          if (corridor.p50_median && corridor.p50_median > 0) {
+          if (corridor.p50_median && isWithinIntradayRange(corridor.p50_median)) {
             const l = candleSeries.current.createPriceLine({
               price: corridor.p50_median,
               color: '#3b82f6',
               lineWidth: 1,
-              lineStyle: 1, // Dotted
+              lineStyle: 1,
               axisLabelVisible: true,
               title: 'P50 Median',
             })
             activePriceLines.current.push(l)
           }
 
-          // P75 Target 1
-          if (corridor.p75_target1 && corridor.p75_target1 > 0) {
+          if (corridor.p75_target1 && isWithinIntradayRange(corridor.p75_target1)) {
             const l = candleSeries.current.createPriceLine({
               price: corridor.p75_target1,
               color: '#10b981',
               lineWidth: 1,
-              lineStyle: 2, // Dashed
+              lineStyle: 2,
               axisLabelVisible: true,
               title: 'P75 Target 1',
             })
             activePriceLines.current.push(l)
           }
 
-          // Q90 Runner
-          if (corridor.q90_runner && corridor.q90_runner > 0) {
+          if (corridor.q90_runner && isWithinIntradayRange(corridor.q90_runner)) {
             const l = candleSeries.current.createPriceLine({
               price: corridor.q90_runner,
               color: '#8b5cf6',
               lineWidth: 1,
-              lineStyle: 2, // Dashed
+              lineStyle: 2,
               axisLabelVisible: true,
               title: 'Q90 Runner',
             })
             activePriceLines.current.push(l)
           }
-        } catch (e) {
-          // ignore line creation error
-        }
+        } catch (e) {}
       }
 
-      if (chartInstance.current) {
-        chartInstance.current.timeScale().fitContent()
+      // 3. AI Buy / Sell Signal Markers on Candles
+      if (signal && candleSeries.current && candles.length > 0) {
+        try {
+          const lastCandle = candles[candles.length - 1]
+          const isBuy = signal.action === 'STRONG_BUY' || signal.action === 'BUY'
+          const isSell = signal.action === 'STRONG_SELL' || signal.action === 'SELL'
+
+          if (isBuy || isSell) {
+            candleSeries.current.setMarkers([
+              {
+                time: lastCandle.time as Time,
+                position: isBuy ? 'belowBar' : 'aboveBar',
+                color: isBuy ? '#10b981' : '#f43f5e',
+                shape: isBuy ? 'arrowUp' : 'arrowDown',
+                text: `AI ${signal.action} (${signal.confidence_pct?.toFixed(0)}%)`,
+              },
+            ])
+          } else {
+            candleSeries.current.setMarkers([])
+          }
+        } catch (markerErr) {}
+      }
+
+      // 4. Institutional Support & Resistance Levels (Key Swing High & Low)
+      if (showSR && candleSeries.current && candles.length >= 10) {
+        try {
+          const recentSlice = candles.slice(-50)
+          const highPx = Math.max(...recentSlice.map((c) => c.high))
+          const lowPx = Math.min(...recentSlice.map((c) => c.low))
+
+          const resLine = candleSeries.current.createPriceLine({
+            price: highPx,
+            color: '#f59e0b',
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: `RES: ₹${highPx.toFixed(2)}`,
+          })
+          const supLine = candleSeries.current.createPriceLine({
+            price: lowPx,
+            color: '#06b6d4',
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: `SUP: ₹${lowPx.toFixed(2)}`,
+          })
+          activePriceLines.current.push(resLine, supLine)
+        } catch (srErr) {}
       }
     } catch (setDataErr) {
       console.error('Error setting chart data:', setDataErr)
     }
-  }, [candles, corridor, showEMA20, showEMA50, showVWAP])
+  }, [candles, corridor, signal, quote?.ltp, showEMA20, showEMA50, showVWAP, showBB, showSR, showAIPosition, timeframe])
 
   // Live tick real-time candle update
   useEffect(() => {
@@ -452,13 +683,11 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
               low: updated.low,
               close: updated.close,
             })
-          } catch (e) {
-            // ignore non-monotonic time
-          }
+          } catch (e) {}
 
-          const copy = [...prevCandles]
-          copy[lastIdx] = updated
-          return copy
+          const next = [...prevCandles]
+          next[lastIdx] = updated
+          return next
         })
       }
     })
@@ -468,59 +697,55 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
     }
   }, [symbol])
 
-  // Latest bar reference for default legend display
+  // Active display bar for hover legend
   const displayBar = useMemo(() => {
     if (hoverData) return hoverData
-    if (candles.length > 0) {
-      const last = candles[candles.length - 1]
-      return {
-        time: last.time,
-        open: last.open,
-        high: last.high,
-        low: last.low,
-        close: last.close,
-      }
-    }
+    if (candles.length > 0) return candles[candles.length - 1]
     return null
   }, [hoverData, candles])
 
-  const barChange = displayBar ? displayBar.close - displayBar.open : 0
-  const barChangePct = displayBar && displayBar.open > 0 ? (barChange / displayBar.open) * 100 : 0
-  const isUp = barChange >= 0
+  const barChangePct = useMemo(() => {
+    if (!displayBar || !displayBar.open) return 0
+    return ((displayBar.close - displayBar.open) / displayBar.open) * 100
+  }, [displayBar])
+
+  const isUp = barChangePct >= 0
 
   return (
-    <div className="flex flex-col h-full glass-panel rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface)]">
-      {/* 1. Institutional Company Info & Floating OHLCV Legend Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)]">
-        {/* Symbol, Name & Sector Tag */}
+    <div className="w-full h-full flex flex-col glass-panel rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--surface)]">
+      {/* 1. Institutional Chart Header Bar */}
+      <div className="flex flex-wrap items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--surface-raised)] gap-2">
+        {/* Symbol & Sector Identification */}
         <div className="flex items-center gap-2.5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-black text-[var(--text-primary)] tracking-wide">
-                {symbol}
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 font-bold border border-blue-500/20">
-                NSE:EQ
-              </span>
-              {quote?.sector && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20 hidden sm:inline">
-                  {quote.sector}
-                </span>
-              )}
-            </div>
-            {quote?.company_name && (
-              <span className="text-xs text-[var(--text-muted)] font-sans truncate max-w-[220px] sm:max-w-[320px] block">
-                {quote.company_name}
-              </span>
-            )}
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono font-black text-sm tracking-wide text-[var(--text-primary)]">
+              {symbol}
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] uppercase">
+              NSE:EQ
+            </span>
           </div>
+
+          {quote?.sector && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Sparkles className="w-2.5 h-2.5" />
+              {quote.sector}
+            </span>
+          )}
+
+          {isLoadingPast && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-mono text-blue-400 animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading history...
+            </span>
+          )}
         </div>
 
-        {/* Floating Crosshair OHLCV Legend formatted in Indian Standard Time (IST) */}
+        {/* Dynamic Floating OHLCV Hover Legend with IST */}
         {displayBar && (
-          <div className="flex flex-wrap items-center gap-2.5 font-mono text-[11px] bg-[var(--surface)] px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] shadow-inner">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-mono bg-[var(--surface)] px-2.5 py-1 rounded-lg border border-[var(--border-subtle)]">
             {displayBar.time && (
-              <span className="text-blue-400 font-bold flex items-center gap-1 border-r border-[var(--border-subtle)] pr-2">
+              <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1 pr-1 border-r border-[var(--border-subtle)]">
                 <Clock className="w-3 h-3 text-blue-400" />
                 {timeframe === '1d'
                   ? new Date(displayBar.time * 1000).toLocaleDateString('en-IN', {
@@ -556,9 +781,9 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
         )}
       </div>
 
-      {/* 2. Timeframe Selector & Technical Indicator Toggles Bar */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-[var(--border-subtle)] bg-[var(--surface)]">
-        {/* Timeframes */}
+      {/* 2. Timeframe Selector (1m, 5m, 1D) & Technical Indicator Toggles Bar */}
+      <div className="flex flex-wrap items-center justify-between px-4 py-1.5 border-b border-[var(--border-subtle)] bg-[var(--surface)] gap-2">
+        {/* Timeframes: 1m, 5m, 1D */}
         <div className="flex items-center gap-1 bg-[var(--surface-raised)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
           {TIMEFRAMES.map((tf) => {
             const isActive = timeframe === tf.value
@@ -566,7 +791,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
               <button
                 key={tf.value}
                 onClick={() => setTimeframe(tf.value)}
-                className={`px-2.5 py-0.5 text-xs font-mono rounded-md transition-all interactive-btn ${
+                className={`px-3 py-0.5 text-xs font-mono rounded-md transition-all interactive-btn ${
                   isActive
                     ? 'bg-blue-600 text-white font-bold shadow-sm'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-overlay)]'
@@ -578,8 +803,22 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
           })}
         </div>
 
-        {/* Technical Overlays Toggle Pills */}
-        <div className="flex items-center gap-1.5">
+        {/* Technical Overlays & AI Position Box Toggle Pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* AI Trade Position Box Overlay Toggle */}
+          <button
+            onClick={() => setShowAIPosition(!showAIPosition)}
+            className={`px-2.5 py-0.5 text-[10px] font-mono rounded-md border transition-all flex items-center gap-1 shadow-sm ${
+              showAIPosition
+                ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400 font-black shadow-emerald-500/20'
+                : 'bg-[var(--surface-raised)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            }`}
+            title="Toggle AI Target / Stop-Loss Position Box"
+          >
+            <Target className="w-3 h-3 text-emerald-400" />
+            AI Targets: {showAIPosition ? 'ON' : 'OFF'}
+          </button>
+
           <button
             onClick={() => setShowEMA20(!showEMA20)}
             className={`px-2 py-0.5 text-[10px] font-mono rounded-md border transition-all flex items-center gap-1 ${
@@ -615,6 +854,42 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
             VWAP
           </button>
+
+          <button
+            onClick={() => setShowBB(!showBB)}
+            className={`px-2 py-0.5 text-[10px] font-mono rounded-md border transition-all flex items-center gap-1 ${
+              showBB
+                ? 'bg-blue-500/15 border-blue-500/40 text-blue-400 font-bold'
+                : 'bg-[var(--surface-raised)] border-[var(--border-subtle)] text-[var(--text-muted)]'
+            }`}
+            title="Bollinger Bands (20, 2)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+            BB (20, 2)
+          </button>
+
+          {/* S/R Key Levels Toggle */}
+          <button
+            onClick={() => setShowSR(!showSR)}
+            className={`px-2 py-0.5 text-[10px] font-mono rounded-md border transition-all flex items-center gap-1 ${
+              showSR
+                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 font-bold'
+                : 'bg-[var(--surface-raised)] border-[var(--border-subtle)] text-[var(--text-muted)]'
+            }`}
+            title="Key Technical Support & Resistance Levels"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            S/R Levels
+          </button>
+
+          {/* Reset Auto-Fit button */}
+          <button
+            onClick={() => chartInstance.current?.timeScale().fitContent()}
+            className="px-2 py-0.5 text-[10px] font-mono rounded-md border bg-[var(--surface-raised)] border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+            title="Reset Chart View to Fit All Visible Bars"
+          >
+            Fit View
+          </button>
         </div>
       </div>
 
@@ -628,6 +903,7 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
             </span>
           </div>
         )}
+
         <div ref={chartContainerRef} className="w-full h-full" />
       </div>
     </div>

@@ -41,13 +41,15 @@ export const AIPanel: React.FC<AIPanelProps> = ({
   const getActionColor = (action: string) => {
     switch (action?.toUpperCase()) {
       case 'STRONG_BUY':
+        return 'text-white bg-emerald-600 border-emerald-500 font-black shadow-md shadow-emerald-500/25'
       case 'BUY':
-        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+        return 'text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/20 border-emerald-500/50 font-bold'
       case 'STRONG_SELL':
+        return 'text-white bg-rose-600 border-rose-500 font-black shadow-md shadow-rose-500/25'
       case 'SELL':
-        return 'text-rose-400 bg-rose-500/10 border-rose-500/30'
+        return 'text-rose-700 bg-rose-100 dark:text-rose-300 dark:bg-rose-500/20 border-rose-500/50 font-bold'
       default:
-        return 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+        return 'text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-500/20 border-amber-500/50 font-bold'
     }
   }
 

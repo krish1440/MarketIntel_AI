@@ -56,8 +56,13 @@ export const api = {
     request<MarketBreadth>('/stocks/breadth'),
 
   // Candlesticks Charts
-  getChartCandles: (symbol: string, timeframe = '1m', limit = 500) =>
-    request<ChartResponse>(`/charts/${encodeURIComponent(symbol)}?timeframe=${timeframe}&limit=${limit}&auto_backfill=true`),
+  getChartCandles: (symbol: string, timeframe = '1m', limit = 500, beforeTimestamp?: number) => {
+    let url = `/charts/${encodeURIComponent(symbol)}?timeframe=${timeframe}&limit=${limit}&auto_backfill=true`
+    if (beforeTimestamp) {
+      url += `&before_timestamp=${beforeTimestamp}`
+    }
+    return request<ChartResponse>(url)
+  },
 
   // AI Quantitative Intelligence
   getScreenerWatchlist: () =>

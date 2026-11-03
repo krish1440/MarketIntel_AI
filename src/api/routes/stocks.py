@@ -113,6 +113,27 @@ def get_quote(
     except Exception:
         pass
 
+    # 1. Resolve true previous day's close for accurate day-wise change %
+    prev_close = None
+    parquet_path = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE" / f"symbol={sym}" / "data.parquet"
+    if parquet_path.exists():
+        try:
+            df = pl.read_parquet(parquet_path)
+            if len(df) >= 2:
+                # If latest row has today's date, previous close is the row before it
+                today_utc = datetime.now(timezone.utc).date()
+                last_dt = df.tail(1)["date"].item(0)
+                if hasattr(last_dt, "date"):
+                    last_dt = last_dt.date()
+                if last_dt == today_utc and len(df) >= 2:
+                    prev_close = float(df.tail(2).head(1)["close"].item(0))
+                else:
+                    prev_close = float(df.tail(1)["close"].item(0))
+            elif len(df) == 1:
+                prev_close = float(df.tail(1)["close"].item(0))
+        except Exception as e:
+            logger.debug(f"Error resolving prev_close for {sym}: {e}")
+
     if quote and "ltp" in quote and float(quote.get("ltp") or 0) > 0:
         ltp = float(quote.get("ltp") or 0.0)
         open_px = float(quote.get("open") or ltp)
@@ -121,7 +142,11 @@ def get_quote(
         close_px = float(quote.get("close") or ltp)
         vwap_px = float(quote.get("vwap") or ltp)
         vol = int(float(quote.get("volume") or 0))
-        pct_chg = float(quote.get("pct_change") or 0.0)
+
+        # Calculate genuine day-wise change against previous day's close
+        ref_px = prev_close if (prev_close and prev_close > 0) else open_px
+        chg_val = round(ltp - ref_px, 2)
+        pct_chg = round((chg_val / ref_px) * 100.0, 2) if ref_px > 0 else 0.0
         upd = str(quote.get("updated_at") or datetime.now(timezone.utc).isoformat())
 
         return StockQuote(
@@ -134,6 +159,8 @@ def get_quote(
             high=high_px,
             low=low_px,
             close=close_px,
+            prev_close=round(ref_px, 2),
+            change=chg_val,
             vwap=vwap_px,
             volume=vol,
             pct_change=pct_chg,
@@ -141,7 +168,6 @@ def get_quote(
         )
 
     # Fallback to Silver 1D Lakehouse if stock was not active in RAM today
-    parquet_path = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE" / f"symbol={sym}" / "data.parquet"
     if parquet_path.exists():
         try:
             df = pl.read_parquet(parquet_path)
@@ -154,7 +180,8 @@ def get_quote(
                 v = int(last_row.get("volume", 0))
                 
                 prev_c = float(df.tail(2).head(1)["close"].item(0)) if len(df) >= 2 else c_px
-                chg = ((c_px - prev_c) / prev_c) * 100.0 if prev_c > 0 else 0.0
+                chg_val = round(c_px - prev_c, 2)
+                chg_pct = round(((c_px - prev_c) / prev_c) * 100.0, 2) if prev_c > 0 else 0.0
 
                 return StockQuote(
                     symbol=sym,
@@ -166,9 +193,11 @@ def get_quote(
                     high=h_px,
                     low=l_px,
                     close=c_px,
+                    prev_close=round(prev_c, 2),
+                    change=chg_val,
                     vwap=c_px,
                     volume=v,
-                    pct_change=round(chg, 2),
+                    pct_change=chg_pct,
                     updated_at=str(last_row.get("date"))
                 )
         except Exception as e:

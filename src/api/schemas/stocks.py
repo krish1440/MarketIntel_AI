@@ -19,6 +19,8 @@ class StockQuote(BaseModel):
     high: float
     low: float
     close: float
+    prev_close: Optional[float] = None
+    change: Optional[float] = None
     vwap: float
     volume: int
     pct_change: float
