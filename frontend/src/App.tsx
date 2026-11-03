@@ -103,6 +103,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadStockData(activeSymbol)
+    wsService.subscribeSymbol(activeSymbol)
   }, [activeSymbol])
 
   // 3. Setup WebSocket Connection & Event Handlers
@@ -120,19 +121,19 @@ export const App: React.FC = () => {
         if (tick.symbol === activeSymbol) {
           setQuote((prev) => {
             if (!prev) return prev
-            const newLtp = tick.ltp || tick.close || prev.ltp
-            const openPx = prev.open || prev.close || newLtp
-            const newChange = newLtp - openPx
-            const newChangePct = openPx > 0 ? (newChange / openPx) * 100 : (prev.pct_change || 0)
+            const newLtp = Number(tick.ltp || tick.close || prev.ltp)
+            const openPx = Number(prev.open || prev.close || newLtp)
+            const newChange = Number((newLtp - openPx).toFixed(2))
+            const newChangePct = openPx > 0 ? Number(((newChange / openPx) * 100).toFixed(2)) : (prev.pct_change || 0)
             return {
               ...prev,
               ltp: newLtp,
               change: newChange,
               change_pct: newChangePct,
               pct_change: newChangePct,
-              high: Math.max(prev.high || 0, newLtp),
-              low: Math.min(prev.low || newLtp, newLtp),
-              volume: tick.volume || prev.volume,
+              high: Math.max(Number(prev.high) || 0, newLtp),
+              low: Math.min(Number(prev.low) || newLtp, newLtp),
+              volume: Number(tick.volume) || prev.volume,
             }
           })
         }

@@ -15,7 +15,11 @@ class DuckDBClient:
 
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path or str(settings.DATA_DIR / "market_intel.duckdb")
-        self.conn = duckdb.connect(database=self.db_path, read_only=False)
+        try:
+            self.conn = duckdb.connect(database=self.db_path, read_only=False)
+        except Exception as e:
+            logger.info(f"Opening DuckDB in read-only mode (shared access): {e}")
+            self.conn = duckdb.connect(database=self.db_path, read_only=True)
         self._configure_engine()
         self._register_views()
 

@@ -79,9 +79,30 @@ class StreamingAggregator:
 
         # 1. Update Daily Stats for Instant Ticker Hash
         if key not in self._daily_stats:
+            prev_close = price
+            existing = self.redis.get_quote(exchange, symbol)
+            if existing and "close" in existing:
+                try:
+                    c = float(existing["close"])
+                    if c > 0 and c != 100.0:
+                        prev_close = c
+                except Exception:
+                    pass
+            if prev_close == price:
+                try:
+                    from src.config.settings import settings
+                    import polars as pl
+                    p = settings.SILVER_DIR / "ohlcv_1d" / f"exchange={exchange}" / f"symbol={symbol}" / "data.parquet"
+                    if p.exists():
+                        df = pl.read_parquet(p)
+                        if len(df) > 0:
+                            prev_close = float(df.tail(1)["close"].item(0))
+                except Exception:
+                    pass
+
             self._daily_stats[key] = {
                 "open": price, "high": price, "low": price, "close": price,
-                "volume": 0, "prev_close": price
+                "volume": 0, "prev_close": prev_close
             }
         
         d_stat = self._daily_stats[key]

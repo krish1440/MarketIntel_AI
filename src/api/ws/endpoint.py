@@ -25,6 +25,14 @@ async def websocket_live_ticks(websocket: WebSocket):
                 await websocket.send_json({"type": "pong"})
             elif data.get("action") == "subscribe":
                 symbols = data.get("symbols", [])
+                try:
+                    from src.api.dependencies import ServiceContainer
+                    services = ServiceContainer.get_instance()
+                    if services.live_ws and symbols:
+                        clean_syms = [str(s).strip().upper() for s in symbols if s]
+                        services.live_ws.subscribe_symbols(clean_syms)
+                except Exception as e:
+                    logger.debug(f"Error subscribing live symbols: {e}")
                 await websocket.send_json({
                     "type": "SUBSCRIPTION_CONFIRMED",
                     "symbols": symbols

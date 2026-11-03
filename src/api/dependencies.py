@@ -26,6 +26,8 @@ class ServiceContainer:
         self.portfolio_manager = VirtualPortfolioManager()
         self.strategy_runner = AIStrategyRunner(portfolio_manager=self.portfolio_manager)
         self.gap_orchestrator = GapOrchestrator()
+        self.live_ws = None
+        self.main_loop = None
         logger.info("Backend Service Container ready.")
 
     @classmethod

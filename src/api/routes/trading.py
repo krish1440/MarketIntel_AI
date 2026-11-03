@@ -1,10 +1,12 @@
 import sqlite3
 import logging
+import asyncio
 from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.dependencies import get_services, ServiceContainer
+from src.api.ws.connection_manager import ws_manager
 from src.api.schemas.trading import (
     PortfolioSummaryResponse,
     PositionItem,
@@ -203,6 +205,13 @@ def place_order(
         if not pos:
             raise HTTPException(status_code=400, detail="Order rejected by risk management (insufficient cash or capital limits)")
 
+        # Notify connected frontend clients via WebSocket
+        if services.main_loop and services.main_loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast("trades", {"type": "TRADE_EVENT", "event": "ORDER_FILLED", "symbol": pos.symbol}),
+                services.main_loop
+            )
+
         return {
             "status": "FILLED",
             "symbol": pos.symbol,
@@ -222,6 +231,13 @@ def place_order(
         settlement = pm.close_position(symbol, current_price=price, exit_trigger="MANUAL_SELL")
         if not settlement:
             raise HTTPException(status_code=500, detail="Failed to close position")
+
+        # Notify connected frontend clients via WebSocket
+        if services.main_loop and services.main_loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                ws_manager.broadcast("trades", {"type": "TRADE_EVENT", "event": "POSITION_CLOSED", "symbol": settlement.symbol}),
+                services.main_loop
+            )
 
         return {
             "status": "FILLED",
@@ -269,6 +285,12 @@ def close_position(
     if not settlement:
         raise HTTPException(status_code=500, detail="Failed to close position")
 
+    if services.main_loop and services.main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("trades", {"type": "TRADE_EVENT", "event": "POSITION_CLOSED", "symbol": settlement.symbol}),
+            services.main_loop
+        )
+
     return {
         "status": "CLOSED",
         "symbol": sym,
@@ -309,6 +331,12 @@ def reset_portfolio_ledger(
         cursor.execute("INSERT INTO portfolio_state (key, value) VALUES ('peak_portfolio_value', ?)", (str(initial_capital),))
         cursor.execute("INSERT INTO portfolio_state (key, value) VALUES ('day_start_value', ?)", (str(initial_capital),))
         conn.commit()
+
+    if services.main_loop and services.main_loop.is_running():
+        asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast("trades", {"type": "TRADE_EVENT", "event": "PORTFOLIO_RESET"}),
+            services.main_loop
+        )
 
     return {
         "status": "RESET_SUCCESS",

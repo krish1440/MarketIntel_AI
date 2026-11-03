@@ -10,6 +10,7 @@ import {
 } from 'lightweight-charts'
 import { CandleItem, CorridorForecast } from '../../types'
 import { api } from '../../services/api'
+import { wsService } from '../../services/websocket'
 import { Loader2, BarChart3, TrendingUp, Layers } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -264,6 +265,51 @@ export const TradingViewChart: React.FC<TradingViewChartProps> = ({ symbol, corr
       console.error('Error setting chart data:', setDataErr)
     }
   }, [candles, corridor])
+
+  // Live tick real-time candle update
+  useEffect(() => {
+    const unsubscribe = wsService.subscribeLive((msg) => {
+      if (msg.type === 'TICK' && msg.data && msg.data.symbol === symbol) {
+        if (!candleSeries.current) return
+        const tickLtp = Number(msg.data.ltp || msg.data.close)
+        if (!tickLtp || isNaN(tickLtp)) return
+
+        setCandles((prevCandles) => {
+          if (!prevCandles || prevCandles.length === 0) return prevCandles
+          const lastIdx = prevCandles.length - 1
+          const lastCandle = prevCandles[lastIdx]
+
+          const updated = {
+            ...lastCandle,
+            high: Math.max(Number(lastCandle.high) || 0, tickLtp),
+            low: Math.min(Number(lastCandle.low) || tickLtp, tickLtp),
+            close: tickLtp,
+            volume: (Number(lastCandle.volume) || 0) + (Number(msg.data.volume) || 1),
+          }
+
+          try {
+            candleSeries.current.update({
+              time: updated.time as Time,
+              open: updated.open,
+              high: updated.high,
+              low: updated.low,
+              close: updated.close,
+            })
+          } catch (e) {
+            // ignore non-monotonic time
+          }
+
+          const copy = [...prevCandles]
+          copy[lastIdx] = updated
+          return copy
+        })
+      }
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [symbol])
 
   return (
     <div className="flex flex-col h-full glass-panel rounded-2xl overflow-hidden border border-[var(--border-subtle)]">

@@ -85,6 +85,12 @@ class WebSocketService {
     }
   }
 
+  public subscribeSymbol(symbol: string) {
+    if (this.liveWs && this.liveWs.readyState === WebSocket.OPEN) {
+      this.liveWs.send(JSON.stringify({ action: 'subscribe', symbols: [symbol] }))
+    }
+  }
+
   public getStatus() {
     return this.isConnected
   }
