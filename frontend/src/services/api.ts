@@ -49,6 +49,9 @@ export const api = {
   getTopUniverse: (limit = 300) =>
     request<TopUniverseItem[]>(`/stocks/universe/top300?limit=${limit}`),
 
+  getSectorHeatmap: () =>
+    request<import('../types').SectorHeatmapItem[]>('/stocks/heatmap/sectors'),
+
   getMarketBreadth: () =>
     request<MarketBreadth>('/stocks/breadth'),
 

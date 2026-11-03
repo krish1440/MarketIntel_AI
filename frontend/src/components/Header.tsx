@@ -28,6 +28,7 @@ interface HeaderProps {
   onSelectSymbol: (symbol: string) => void
   onOpenSystemModal: () => void
   onToggleUniverseDrawer: () => void
+  onOpenSectorHeatmap?: () => void
   onRefresh?: () => void
   isRefreshing?: boolean
   isWsConnected: boolean
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectSymbol,
   onOpenSystemModal,
   onToggleUniverseDrawer,
+  onOpenSectorHeatmap,
   onRefresh,
   isRefreshing = false,
   isWsConnected,
@@ -123,25 +125,20 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Left Section: Platform Brand & Universal Search */}
         <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-          {/* Brand Logo & Live Engine Pill */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-[1.5px] flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <div className="w-full h-full bg-[var(--surface)] rounded-[6.5px] flex items-center justify-center">
-                <Activity className="w-4 h-4 text-blue-500" />
-              </div>
-            </div>
-            <div>
+          {/* Typographical Brand Logo - The Name IS the Logo */}
+          <div className="flex items-center gap-2 select-none cursor-pointer group" onClick={() => onSelectSymbol('RELIANCE')}>
+            <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm tracking-tight text-[var(--text-primary)]">
-                  Market<span className="text-blue-500">Intel</span>
+                <span className="font-black text-sm sm:text-base tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-200 to-emerald-400 drop-shadow-sm font-sans uppercase">
+                  MARKET<span className="text-blue-400 font-medium">INTEL</span>
                 </span>
-                <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold border border-blue-500/20">
-                  v2.0
+                <span className="text-[8px] font-mono uppercase px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 font-extrabold border border-blue-500/20 tracking-wider">
+                  AI v2
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>NSE / BSE LAKEHOUSE</span>
+              <div className="flex items-center gap-1.5 text-[9px] text-[var(--text-muted)] font-mono tracking-widest uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/50" />
+                <span>LIVE QUANT DESK</span>
               </div>
             </div>
           </div>
@@ -314,6 +311,18 @@ export const Header: React.FC<HeaderProps> = ({
             <Layers className="w-3.5 h-3.5 text-blue-400" />
             <span className="hidden sm:inline text-[var(--text-primary)]">Universe</span>
           </button>
+
+          {/* Sector Heatmap Trigger */}
+          {onOpenSectorHeatmap && (
+            <button
+              onClick={onOpenSectorHeatmap}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--surface-raised)] border border-[var(--border-subtle)] hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all text-xs font-mono interactive-btn"
+              title="Open Sector Momentum Heatmap & Strong Buys"
+            >
+              <Activity className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline text-[var(--text-primary)]">Sectors</span>
+            </button>
+          )}
 
           {/* Engine Health / System Modal Trigger */}
           <button

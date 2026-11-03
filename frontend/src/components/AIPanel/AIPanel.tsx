@@ -269,36 +269,61 @@ export const AIPanel: React.FC<AIPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Quant Level Ladder */}
-                  <div className="space-y-1.5 font-mono text-xs">
+                  {/* Quant Level Ladder with Plain-English Financial Explanations */}
+                  <div className="space-y-2 font-mono text-xs">
                     {/* Q90 Runner */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                      <span className="text-[10px] font-bold">Q90 BULL RUNNER</span>
-                      <span className="font-bold tnum">₹{q90.toFixed(2)}</span>
+                    <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-400 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-wider">Q90 BULL RUNNER</span>
+                        <span className="font-bold text-sm tnum text-purple-300">₹{q90.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[10px] text-purple-300/80 font-sans leading-tight">
+                        90th percentile optimistic tail expansion. Maximum swing runner target before mean-reversion risk.
+                      </p>
                     </div>
 
                     {/* P75 Target 1 */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                      <span className="text-[10px] font-bold">P75 PROFIT TARGET 1</span>
-                      <span className="font-bold tnum">₹{p75.toFixed(2)}</span>
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-wider">P75 PROFIT TARGET 1</span>
+                        <span className="font-bold text-sm tnum text-emerald-300">₹{p75.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[10px] text-emerald-300/80 font-sans leading-tight">
+                        75th percentile resistance. Primary profit-take where 50% position is de-risked to breakeven.
+                      </p>
                     </div>
 
                     {/* P50 Median */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                      <span className="text-[10px] font-bold">P50 BASELINE MEDIAN</span>
-                      <span className="font-bold tnum">₹{p50.toFixed(2)}</span>
+                    <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-400 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-wider">P50 BASELINE MEDIAN</span>
+                        <span className="font-bold text-sm tnum text-blue-300">₹{p50.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[10px] text-blue-300/80 font-sans leading-tight">
+                        50th percentile central fair-value path. Prices sustained above P50 reflect institutional momentum.
+                      </p>
                     </div>
 
                     {/* P25 Lower Bound */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                      <span className="text-[10px] font-bold">P25 CONSERVATIVE SUPPORT</span>
-                      <span className="font-bold tnum">₹{p25.toFixed(2)}</span>
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-wider">P25 CONSERVATIVE SUPPORT</span>
+                        <span className="font-bold text-sm tnum text-amber-300">₹{p25.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[10px] text-amber-300/80 font-sans leading-tight">
+                        25th percentile value accumulation dip. High-probability swing support in bull market regimes.
+                      </p>
                     </div>
 
                     {/* P05 Tail Stop Floor */}
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
-                      <span className="text-[10px] font-bold">P05 TAIL STOP FLOOR</span>
-                      <span className="font-bold tnum">₹{p05.toFixed(2)}</span>
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-wider">P05 TAIL STOP FLOOR</span>
+                        <span className="font-bold text-sm tnum text-rose-300">₹{p05.toFixed(2)}</span>
+                      </div>
+                      <p className="text-[10px] text-rose-300/80 font-sans leading-tight">
+                        5th percentile structural risk floor. Complete quantitative thesis invalidation; hard structural stop-loss.
+                      </p>
                     </div>
                   </div>
 
