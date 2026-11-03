@@ -18,8 +18,11 @@ class DuckDBClient:
         try:
             self.conn = duckdb.connect(database=self.db_path, read_only=False)
         except Exception as e:
-            logger.info(f"Opening DuckDB in read-only mode (shared access): {e}")
-            self.conn = duckdb.connect(database=self.db_path, read_only=True)
+            try:
+                self.conn = duckdb.connect(database=self.db_path, read_only=True)
+            except Exception:
+                logger.info("Opening DuckDB in high-speed in-memory mode (lakehouse views mapped directly to parquets).")
+                self.conn = duckdb.connect(database=":memory:")
         self._configure_engine()
         self._register_views()
 

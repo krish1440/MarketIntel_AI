@@ -205,6 +205,10 @@ def place_order(
         if not pos:
             raise HTTPException(status_code=400, detail="Order rejected by risk management (insufficient cash or capital limits)")
 
+        # Ensure newly opened position is actively streaming ticks for automated exits and trailing stops
+        if services.live_ws:
+            services.live_ws.subscribe_symbols([pos.symbol])
+
         # Notify connected frontend clients via WebSocket
         if services.main_loop and services.main_loop.is_running():
             asyncio.run_coroutine_threadsafe(

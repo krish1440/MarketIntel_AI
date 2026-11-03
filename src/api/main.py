@@ -5,9 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from datetime import datetime, timezone, timedelta
 from src.config.settings import settings
 from src.api.dependencies import ServiceContainer
 from src.api.ws.connection_manager import ws_manager
+from src.serving.focus_universe_service import FocusUniverseService
 from src.api.routes.stocks import router as stocks_router
 from src.api.routes.charts import router as charts_router
 from src.api.routes.ai import router as ai_router
@@ -61,21 +63,37 @@ async def lifespan(app: FastAPI):
         live_ws.on_tick = on_tick_callback
         connected = live_ws.connect()
         if connected:
-            # Auto-subscribe core liquid universe
-            top_universe = [
-                "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN",
-                "BHARTIARTL", "ITC", "LICI", "HINDUNILVR", "LT", "BAJFINANCE",
-                "HCLTECH", "MARUTI", "SUNPHARMA", "ADANIENT", "KOTAKBANK",
-                "AXISBANK", "NTPC", "ONGC", "POWERGRID", "TITAN", "COALINDIA",
-                "ULTRACEMCO", "M&M", "BAJAJFINSV", "WIPRO", "ADANIPORTS",
-                "SWIGGY", "ZOMATO"
-            ]
-            live_ws.subscribe_symbols(top_universe)
-            logger.info(f"Angel One live tick feeder active for {len(top_universe)} universe equities.")
+            # Dynamically resolve today's AI focus watchlist + active positions
+            focus_service = FocusUniverseService(services)
+            focus_symbols = focus_service.get_today_focus_symbols(watchlist_size=40)
+            live_ws.subscribe_symbols(focus_symbols)
+            logger.info(f"Angel One live tick feeder active for {len(focus_symbols)} dynamic focus equities.")
         else:
             logger.warning("Could not establish Angel One live websocket; falling back to simulation if needed.")
     except Exception as e:
         logger.error(f"Error initializing live market feeder: {e}", exc_info=True)
+
+    # Automated 09:15 AM Market-Open Focus Watchlist Refresher
+    async def market_open_focus_refresher():
+        """Periodic background worker checking for market open (09:15:30 IST) to refresh AI focus candidates."""
+        while True:
+            try:
+                await asyncio.sleep(60)
+                now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+                # Check if weekday (Monday-Friday) and within the 09:15-09:17 AM market open window
+                if now_ist.weekday() < 5 and now_ist.hour == 9 and now_ist.minute in [15, 16]:
+                    if services.live_ws:
+                        f_srv = FocusUniverseService(services)
+                        fresh_syms = f_srv.get_today_focus_symbols(watchlist_size=40)
+                        services.live_ws.subscribe_symbols(fresh_syms)
+                        logger.info(f"Market-open focus watchlist refreshed: {len(fresh_syms)} equities actively streaming.")
+                        await asyncio.sleep(120)  # Sleep past market-open window
+            except asyncio.CancelledError:
+                break
+            except Exception as ex:
+                logger.debug(f"Error in market_open_focus_refresher: {ex}")
+
+    refresher_task = asyncio.create_task(market_open_focus_refresher())
 
     logger.info(
         f"Platform ready. Master Equities: {len(services.security_master.df) if services.security_master.df is not None else 0} | "
@@ -83,6 +101,7 @@ async def lifespan(app: FastAPI):
     )
     yield
     logger.info("Shutting down MarketIntel API server cleanly.")
+    refresher_task.cancel()
     if services.live_ws:
         try:
             services.live_ws.close()
