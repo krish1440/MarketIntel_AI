@@ -8,10 +8,32 @@ import polars as pl
 
 from src.config.settings import settings
 from src.api.dependencies import ServiceContainer, get_services
-from src.api.schemas.stocks import StockSearchResult, StockQuote, TopUniverseItem, MarketBreadth
+from src.master.sector_mapper import SectorMapper
+from src.api.schemas.stocks import (
+    StockSearchResult,
+    StockQuote,
+    TopUniverseItem,
+    MarketBreadth,
+    SectorHeatmapItem,
+    SectorStockItem
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/stocks", tags=["Stocks & Universe"])
+
+SECTOR_DISPLAY_NAMES = {
+    "NIFTY_BANK": "Banking",
+    "NIFTY_IT": "Information Tech",
+    "NIFTY_AUTO": "Automobile",
+    "NIFTY_ENERGY": "Energy, Oil & Gas",
+    "NIFTY_PHARMA": "Pharma & Health",
+    "NIFTY_FMCG": "FMCG & Foods",
+    "NIFTY_METAL": "Metals & Mining",
+    "NIFTY_FIN_SERVICE": "Financial Services",
+    "NIFTY_INFRA": "Infrastructure",
+    "NIFTY_REALTY": "Real Estate",
+    "NIFTY_CONSUMER_DURABLES": "Consumer Durables"
+}
 
 @router.get("/search", response_model=List[StockSearchResult])
 def search_stocks(
@@ -74,6 +96,44 @@ def get_quote(
     sym = symbol.strip().upper()
     quote = services.redis_manager.get_quote("NSE", sym)
 
+    # Resolve company name and sector
+    company_name = sym
+    sector = "EQUITY"
+    if services.security_master.df is not None:
+        try:
+            m = services.security_master.df.filter(pl.col("nse_symbol") == sym)
+            if len(m) > 0:
+                company_name = str(m["company_name"].item(0))
+        except Exception:
+            pass
+    try:
+        mapper = SectorMapper()
+        raw_sec = mapper.get_sector_for_symbol(sym)
+        sector = SECTOR_DISPLAY_NAMES.get(raw_sec, raw_sec.replace("NIFTY_", "").title())
+    except Exception:
+        pass
+
+    # 1. Resolve true previous day's close for accurate day-wise change %
+    prev_close = None
+    parquet_path = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE" / f"symbol={sym}" / "data.parquet"
+    if parquet_path.exists():
+        try:
+            df = pl.read_parquet(parquet_path)
+            if len(df) >= 2:
+                # If latest row has today's date, previous close is the row before it
+                today_utc = datetime.now(timezone.utc).date()
+                last_dt = df.tail(1)["date"].item(0)
+                if hasattr(last_dt, "date"):
+                    last_dt = last_dt.date()
+                if last_dt == today_utc and len(df) >= 2:
+                    prev_close = float(df.tail(2).head(1)["close"].item(0))
+                else:
+                    prev_close = float(df.tail(1)["close"].item(0))
+            elif len(df) == 1:
+                prev_close = float(df.tail(1)["close"].item(0))
+        except Exception as e:
+            logger.debug(f"Error resolving prev_close for {sym}: {e}")
+
     if quote and "ltp" in quote and float(quote.get("ltp") or 0) > 0:
         ltp = float(quote.get("ltp") or 0.0)
         open_px = float(quote.get("open") or ltp)
@@ -82,17 +142,25 @@ def get_quote(
         close_px = float(quote.get("close") or ltp)
         vwap_px = float(quote.get("vwap") or ltp)
         vol = int(float(quote.get("volume") or 0))
-        pct_chg = float(quote.get("pct_change") or 0.0)
+
+        # Calculate genuine day-wise change against previous day's close
+        ref_px = prev_close if (prev_close and prev_close > 0) else open_px
+        chg_val = round(ltp - ref_px, 2)
+        pct_chg = round((chg_val / ref_px) * 100.0, 2) if ref_px > 0 else 0.0
         upd = str(quote.get("updated_at") or datetime.now(timezone.utc).isoformat())
 
         return StockQuote(
             symbol=sym,
+            company_name=company_name,
+            sector=sector,
             exchange="NSE",
             ltp=ltp,
             open=open_px,
             high=high_px,
             low=low_px,
             close=close_px,
+            prev_close=round(ref_px, 2),
+            change=chg_val,
             vwap=vwap_px,
             volume=vol,
             pct_change=pct_chg,
@@ -100,7 +168,6 @@ def get_quote(
         )
 
     # Fallback to Silver 1D Lakehouse if stock was not active in RAM today
-    parquet_path = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE" / f"symbol={sym}" / "data.parquet"
     if parquet_path.exists():
         try:
             df = pl.read_parquet(parquet_path)
@@ -113,19 +180,24 @@ def get_quote(
                 v = int(last_row.get("volume", 0))
                 
                 prev_c = float(df.tail(2).head(1)["close"].item(0)) if len(df) >= 2 else c_px
-                chg = ((c_px - prev_c) / prev_c) * 100.0 if prev_c > 0 else 0.0
+                chg_val = round(c_px - prev_c, 2)
+                chg_pct = round(((c_px - prev_c) / prev_c) * 100.0, 2) if prev_c > 0 else 0.0
 
                 return StockQuote(
                     symbol=sym,
+                    company_name=company_name,
+                    sector=sector,
                     exchange="NSE",
                     ltp=c_px,
                     open=o_px,
                     high=h_px,
                     low=l_px,
                     close=c_px,
+                    prev_close=round(prev_c, 2),
+                    change=chg_val,
                     vwap=c_px,
                     volume=v,
-                    pct_change=round(chg, 2),
+                    pct_change=chg_pct,
                     updated_at=str(last_row.get("date"))
                 )
         except Exception as e:
@@ -195,3 +267,110 @@ def get_market_breadth(
         adv_dec_ratio=ratio,
         timestamp=datetime.now(timezone.utc).isoformat()
     )
+
+
+@router.get("/heatmap/sectors", response_model=List[SectorHeatmapItem])
+def get_sector_heatmap(
+    services: ServiceContainer = Depends(get_services)
+):
+    """
+    Returns live performance heatmap across all NSE official sectors.
+    Aggregates % return, advances/declines, and highlights Strong Buy / Buy candidates per sector.
+    """
+    mapper = SectorMapper()
+    mapping_file = settings.SILVER_DIR / "master" / "stock_sector_mapping.parquet"
+    if not mapping_file.exists():
+        mapper.map_all_securities()
+
+    try:
+        df_sec = pl.read_parquet(mapping_file)
+    except Exception:
+        df_sec = mapper.map_all_securities()
+
+    # Get active watchlist if available to cross-reference strong buys
+    focus_syms = set()
+    try:
+        if hasattr(services.strategy_runner, "focus_watchlist") and services.strategy_runner.focus_watchlist:
+            focus_syms = {c.symbol.upper() for c in services.strategy_runner.focus_watchlist}
+    except Exception:
+        pass
+
+    results: List[SectorHeatmapItem] = []
+    
+    # Process primary sectoral groups
+    for sec_id, sec_name in SECTOR_DISPLAY_NAMES.items():
+        sec_stocks_df = df_sec.filter(pl.col("sector_index") == sec_id)
+        if len(sec_stocks_df) == 0:
+            continue
+
+        sample_symbols = sec_stocks_df["symbol"].to_list()[:30] # take top 30 representative stocks
+        adv = 0
+        dec = 0
+        chg_list = []
+        stock_items: List[SectorStockItem] = []
+        strong_buys_count = 0
+
+        for sym in sample_symbols:
+            # Check Redis or 1D fallback
+            q = services.redis_manager.get_quote("NSE", sym)
+            ltp = 0.0
+            pct_chg = 0.0
+            if q and "ltp" in q:
+                ltp = float(q.get("ltp") or 0.0)
+                pct_chg = float(q.get("pct_change") or 0.0)
+            else:
+                p = settings.SILVER_DIR / "ohlcv_1d" / "exchange=NSE" / f"symbol={sym}" / "data.parquet"
+                if p.exists():
+                    try:
+                        d = pl.read_parquet(p)
+                        if len(d) >= 2:
+                            ltp = float(d.tail(1)["close"].item(0))
+                            prev_c = float(d.tail(2).head(1)["close"].item(0))
+                            pct_chg = ((ltp - prev_c) / prev_c) * 100.0 if prev_c > 0 else 0.0
+                    except Exception:
+                        pass
+
+            if ltp > 0:
+                chg_list.append(pct_chg)
+                if pct_chg > 0.05:
+                    adv += 1
+                elif pct_chg < -0.05:
+                    dec += 1
+
+                # Determine action
+                if sym in focus_syms or pct_chg >= 1.5:
+                    action = "STRONG_BUY"
+                    strong_buys_count += 1
+                elif pct_chg >= 0.5:
+                    action = "BUY"
+                elif pct_chg <= -1.2:
+                    action = "SELL"
+                else:
+                    action = "HOLD"
+
+                stock_items.append(SectorStockItem(
+                    symbol=sym,
+                    company_name=sym,
+                    ltp=round(ltp, 2),
+                    pct_change=round(pct_chg, 2),
+                    action=action
+                ))
+
+        avg_chg = round(sum(chg_list) / max(len(chg_list), 1), 2)
+        # Sort top stocks by strong buy first, then highest % change
+        stock_items.sort(key=lambda s: (s.action == "STRONG_BUY", s.action == "BUY", s.pct_change), reverse=True)
+
+        results.append(SectorHeatmapItem(
+            sector_id=sec_id,
+            sector_name=sec_name,
+            avg_change_pct=avg_chg,
+            advances=adv,
+            declines=dec,
+            total_stocks=len(chg_list),
+            strong_buys_count=strong_buys_count,
+            top_stocks=stock_items[:12]
+        ))
+
+    # Sort sectors by highest average gain
+    results.sort(key=lambda x: x.avg_change_pct, reverse=True)
+    return results

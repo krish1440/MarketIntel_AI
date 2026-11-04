@@ -10,12 +10,14 @@ export interface StockSearchResult {
 export interface StockQuote {
   symbol: string
   company_name?: string
+  sector?: string
   exchange?: string
   ltp: number
   open?: number
   high?: number
   low?: number
   close?: number
+  prev_close?: number
   volume?: number
   vwap?: number | null
   pct_change?: number
@@ -187,4 +189,23 @@ export interface SystemHealth {
   duckdb_active: boolean
   lakehouse_records_parity: boolean
   active_background_tasks: number
+}
+
+export interface SectorStockItem {
+  symbol: string
+  company_name: string
+  ltp: number
+  pct_change: number
+  action: string
+}
+
+export interface SectorHeatmapItem {
+  sector_id: string
+  sector_name: string
+  avg_change_pct: number
+  advances: number
+  declines: number
+  total_stocks: number
+  strong_buys_count: number
+  top_stocks: SectorStockItem[]
 }

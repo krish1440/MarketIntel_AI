@@ -11,12 +11,16 @@ class StockSearchResult(BaseModel):
 
 class StockQuote(BaseModel):
     symbol: str
+    company_name: Optional[str] = None
+    sector: Optional[str] = None
     exchange: str = "NSE"
     ltp: float
     open: float
     high: float
     low: float
     close: float
+    prev_close: Optional[float] = None
+    change: Optional[float] = None
     vwap: float
     volume: int
     pct_change: float
@@ -29,6 +33,23 @@ class TopUniverseItem(BaseModel):
     price: float
     turnover_20d_cr: float
     rank: int
+
+class SectorStockItem(BaseModel):
+    symbol: str
+    company_name: str
+    ltp: float
+    pct_change: float
+    action: str
+
+class SectorHeatmapItem(BaseModel):
+    sector_id: str
+    sector_name: str
+    avg_change_pct: float
+    advances: int
+    declines: int
+    total_stocks: int
+    strong_buys_count: int
+    top_stocks: List[SectorStockItem]
 
 class MarketBreadth(BaseModel):
     advances: int

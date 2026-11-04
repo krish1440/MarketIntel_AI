@@ -4,6 +4,7 @@ import { TradingViewChart } from './components/Chart/TradingViewChart'
 import { AIPanel } from './components/AIPanel/AIPanel'
 import { TradingPanel } from './components/Trading/TradingPanel'
 import { TopUniverseDrawer } from './components/Universe/TopUniverseDrawer'
+import { SectorHeatmapModal } from './components/Universe/SectorHeatmapModal'
 import { SystemModal } from './components/System/SystemModal'
 import { ParticleBackdrop } from './components/ParticleBackdrop'
 import { api } from './services/api'
@@ -35,6 +36,7 @@ export const App: React.FC = () => {
   const [universe, setUniverse] = useState<TopUniverseItem[]>([])
 
   const [isUniverseDrawerOpen, setIsUniverseDrawerOpen] = useState(false)
+  const [isHeatmapOpen, setIsHeatmapOpen] = useState(false)
   const [isSystemModalOpen, setIsSystemModalOpen] = useState(false)
   const [isWsConnected, setIsWsConnected] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -172,6 +174,7 @@ export const App: React.FC = () => {
         onSelectSymbol={setActiveSymbol}
         onOpenSystemModal={() => setIsSystemModalOpen(true)}
         onToggleUniverseDrawer={() => setIsUniverseDrawerOpen(true)}
+        onOpenSectorHeatmap={() => setIsHeatmapOpen(true)}
         onRefresh={handleManualRefresh}
         isRefreshing={isRefreshing}
         isWsConnected={isWsConnected}
@@ -182,13 +185,13 @@ export const App: React.FC = () => {
         
         {/* Left Column: Charting Canvas & Trading Governance (8 Cols) */}
         <div className="lg:col-span-8 flex flex-col gap-3 md:gap-4">
-          {/* Candlestick Chart Pane */}
-          <div className="h-[480px] md:h-[520px]">
-            <TradingViewChart symbol={activeSymbol} corridor={corridor} />
+          {/* Candlestick Chart Pane with Dynamic Sizing */}
+          <div className="h-[490px] md:h-[530px] flex flex-col">
+            <TradingViewChart symbol={activeSymbol} corridor={corridor} quote={quote} signal={signal} />
           </div>
 
           {/* Execution & Risk Governance Pane */}
-          <div className="h-[360px] md:h-[400px]">
+          <div className="h-[360px] md:h-[390px]">
             <TradingPanel
               portfolio={portfolio}
               positions={positions}
@@ -224,6 +227,13 @@ export const App: React.FC = () => {
         onClose={() => setIsUniverseDrawerOpen(false)}
         universe={universe}
         activeSymbol={activeSymbol}
+        onSelectSymbol={setActiveSymbol}
+      />
+
+      {/* Sector Momentum Heatmap & Strong Buy Modal */}
+      <SectorHeatmapModal
+        isOpen={isHeatmapOpen}
+        onClose={() => setIsHeatmapOpen(false)}
         onSelectSymbol={setActiveSymbol}
       />
 

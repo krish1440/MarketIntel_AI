@@ -11,16 +11,18 @@ router = APIRouter(prefix="/api/charts", tags=["Charts & Candlesticks"])
 @router.get("/{symbol}", response_model=ChartResponse)
 def get_chart_candlesticks(
     symbol: str,
-    timeframe: str = Query("1m", pattern="^(1m|5m|15m|1h|1d)$", description="Candle timeframe: 1m, 5m, 15m, 1h, 1d"),
+    timeframe: str = Query("1m", pattern="^(1m|5m|1d)$", description="Candle timeframe: 1m, 5m, 1d"),
     limit: int = Query(500, ge=1, le=2000, description="Max candles to return"),
     lookback_bars: Optional[int] = Query(None, description="Alias for limit"),
     auto_backfill: bool = Query(True, description="When true, automatically backfills missing historical bars on-the-fly"),
+    before_timestamp: Optional[int] = Query(None, description="Epoch timestamp in seconds to fetch past candles before (infinite scroll)"),
     services: ServiceContainer = Depends(get_services)
 ):
     """
     High-Speed Candlestick Serving API for TradingView Lightweight Charts (<30ms).
     Seamlessly blends historical Parquet data (from DuckDB) with today's live RAM minutes.
     Automatically catches up any missing offline days if auto_backfill is enabled.
+    Supports continuous backwards infinite scroll via `before_timestamp`.
     """
     sym = symbol.strip().upper()
     effective_limit = lookback_bars if lookback_bars is not None else limit
@@ -30,7 +32,8 @@ def get_chart_candlesticks(
             timeframe=timeframe,
             limit=effective_limit,
             exchange="NSE",
-            auto_backfill=auto_backfill
+            auto_backfill=auto_backfill,
+            before_timestamp=before_timestamp
         )
 
         candle_items = []
