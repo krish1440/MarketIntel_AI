@@ -16,7 +16,7 @@
     "stcg_tax_paid_inr": 123226.83,
     "take_home_net_cash_profit_inr": 492907.34,
     "net_return_on_capital_pct": 49.29,
-    "annualized_cagr_net_pct": 22.2,
+    "annualized_cagr_net_pct": 16.81,
     "max_portfolio_drawdown_pct": -9.52,
     "profit_factor": 1.86,
     "total_orders_filled": 608,
@@ -24,7 +24,11 @@
     "distinct_stocks_traded": 124,
     "average_holding_days": 28.5,
     "min_holding_days": 1,
-    "max_holding_days": 133
+    "max_holding_days": 133,
+    "annualized_cagr_gross_pct": 22.45,
+    "audit_period_years": 2.58,
+    "audit_sessions_count": 635,
+    "audit_months_count": 31
   },
   "exit_triggers": [
     {
@@ -63,194 +67,194 @@
       "month": "2024-01",
       "trades": 21,
       "gross_pnl": 63840.14,
-      "net_pnl": 43496.6
+      "net_pnl": 65731.61
     },
     {
       "month": "2024-02",
       "trades": 11,
       "gross_pnl": 5614.1,
-      "net_pnl": -2059.03
+      "net_pnl": -3111.58
     },
     {
       "month": "2024-03",
       "trades": 16,
       "gross_pnl": 24271.62,
-      "net_pnl": 10127.93
+      "net_pnl": 15305.22
     },
     {
       "month": "2024-04",
       "trades": 8,
       "gross_pnl": 34027.64,
-      "net_pnl": 23795.56
+      "net_pnl": 35959.6
     },
     {
       "month": "2024-05",
       "trades": 12,
       "gross_pnl": 21839.54,
-      "net_pnl": 11296.87
+      "net_pnl": 17071.71
     },
     {
       "month": "2024-06",
       "trades": 10,
       "gross_pnl": 74590.13,
-      "net_pnl": 55826.53
+      "net_pnl": 84364.47
     },
     {
       "month": "2024-07",
       "trades": 13,
       "gross_pnl": 7121.13,
-      "net_pnl": -1711.7
+      "net_pnl": -2586.7
     },
     {
       "month": "2024-08",
       "trades": 13,
       "gross_pnl": -14245.46,
-      "net_pnl": -21768.93
+      "net_pnl": -32896.98
     },
     {
       "month": "2024-09",
       "trades": 11,
       "gross_pnl": 29515.29,
-      "net_pnl": 18161.01
+      "net_pnl": 27444.73
     },
     {
       "month": "2024-10",
       "trades": 18,
       "gross_pnl": -18580.01,
-      "net_pnl": -29719.39
+      "net_pnl": -44911.63
     },
     {
       "month": "2024-11",
       "trades": 7,
       "gross_pnl": 667.98,
-      "net_pnl": -4359.84
+      "net_pnl": -6588.55
     },
     {
       "month": "2024-12",
       "trades": 7,
       "gross_pnl": -38671.56,
-      "net_pnl": -40378.86
+      "net_pnl": -61020.12
     },
     {
       "month": "2025-01",
       "trades": 14,
       "gross_pnl": -6780.18,
-      "net_pnl": -17378.63
+      "net_pnl": -26262.41
     },
     {
       "month": "2025-02",
       "trades": 17,
       "gross_pnl": 1827.35,
-      "net_pnl": -9567.86
+      "net_pnl": -14458.85
     },
     {
       "month": "2025-03",
       "trades": 22,
       "gross_pnl": 47166.05,
-      "net_pnl": 26878.21
+      "net_pnl": 40618.07
     },
     {
       "month": "2025-04",
       "trades": 7,
       "gross_pnl": 33357.36,
-      "net_pnl": 24669.64
+      "net_pnl": 37280.5
     },
     {
       "month": "2025-05",
       "trades": 8,
       "gross_pnl": 16958.21,
-      "net_pnl": 10182.87
+      "net_pnl": 15388.25
     },
     {
       "month": "2025-06",
       "trades": 5,
       "gross_pnl": 26283.1,
-      "net_pnl": 19210.14
+      "net_pnl": 29030.16
     },
     {
       "month": "2025-07",
       "trades": 14,
       "gross_pnl": 55965.72,
-      "net_pnl": 37055.22
+      "net_pnl": 55997.46
     },
     {
       "month": "2025-08",
       "trades": 11,
       "gross_pnl": 18356.42,
-      "net_pnl": 9166.78
+      "net_pnl": 13852.74
     },
     {
       "month": "2025-09",
       "trades": 7,
       "gross_pnl": 8638.72,
-      "net_pnl": 1665.31
+      "net_pnl": 2516.6
     },
     {
       "month": "2025-10",
       "trades": 14,
       "gross_pnl": 32269.33,
-      "net_pnl": 15878.64
+      "net_pnl": 23995.64
     },
     {
       "month": "2025-11",
       "trades": 7,
       "gross_pnl": 1323.42,
-      "net_pnl": -4028.63
+      "net_pnl": -6088.02
     },
     {
       "month": "2025-12",
       "trades": 13,
       "gross_pnl": 73575.23,
-      "net_pnl": 52415.86
+      "net_pnl": 79210.3
     },
     {
       "month": "2026-01",
       "trades": 11,
       "gross_pnl": 74556.31,
-      "net_pnl": 56703.41
+      "net_pnl": 85689.61
     },
     {
       "month": "2026-02",
       "trades": 10,
       "gross_pnl": -18723.39,
-      "net_pnl": -30048.41
+      "net_pnl": -45408.85
     },
     {
       "month": "2026-03",
       "trades": 18,
       "gross_pnl": 67505.87,
-      "net_pnl": 42743.05
+      "net_pnl": 64592.85
     },
     {
       "month": "2026-04",
       "trades": 7,
       "gross_pnl": 27147.64,
-      "net_pnl": 19256.93
+      "net_pnl": 29100.87
     },
     {
       "month": "2026-05",
       "trades": 12,
       "gross_pnl": 42438.73,
-      "net_pnl": 25661.85
+      "net_pnl": 38779.92
     },
     {
       "month": "2026-06",
       "trades": 11,
       "gross_pnl": -166.68,
-      "net_pnl": -9898.24
+      "net_pnl": -14958.12
     },
     {
       "month": "2026-07",
       "trades": 4,
       "gross_pnl": -5582.93,
-      "net_pnl": -7101.16
+      "net_pnl": -10731.16
     }
   ],
   "top_winning_trades": [
     {
       "symbol": "SBC",
-      "entry_time": "2026-02-05T09:15:00+00:00",
-      "exit_time": "2026-06-18T15:15:00+00:00",
+      "entry_time": "2026-02-05T09:15:00+05:30",
+      "exit_time": "2026-06-18T15:15:00+05:30",
       "holding_days": 133,
       "quantity": 3113,
       "entry_price": 30.71,
@@ -262,8 +266,8 @@
     },
     {
       "symbol": "CUPID",
-      "entry_time": "2026-05-26T09:15:00+00:00",
-      "exit_time": "2026-06-28T15:15:00+00:00",
+      "entry_time": "2026-05-26T09:15:00+05:30",
+      "exit_time": "2026-06-26T15:15:00+05:30",
       "holding_days": 33,
       "quantity": 592,
       "entry_price": 128.96,
@@ -275,8 +279,8 @@
     },
     {
       "symbol": "CUPID",
-      "entry_time": "2025-07-29T09:15:00+00:00",
-      "exit_time": "2025-10-08T15:15:00+00:00",
+      "entry_time": "2025-07-29T09:15:00+05:30",
+      "exit_time": "2025-10-08T15:15:00+05:30",
       "holding_days": 71,
       "quantity": 1981,
       "entry_price": 30.09,
@@ -288,8 +292,8 @@
     },
     {
       "symbol": "SUZLON",
-      "entry_time": "2024-06-20T09:15:00+00:00",
-      "exit_time": "2024-08-08T15:15:00+00:00",
+      "entry_time": "2024-06-20T09:15:00+05:30",
+      "exit_time": "2024-08-08T15:15:00+05:30",
       "holding_days": 49,
       "quantity": 1370,
       "entry_price": 53.08,
@@ -301,8 +305,8 @@
     },
     {
       "symbol": "CUPID",
-      "entry_time": "2025-10-23T09:15:00+00:00",
-      "exit_time": "2025-11-30T15:15:00+00:00",
+      "entry_time": "2025-10-23T09:15:00+05:30",
+      "exit_time": "2025-11-28T15:15:00+05:30",
       "holding_days": 38,
       "quantity": 1384,
       "entry_price": 47.0,
@@ -314,8 +318,8 @@
     },
     {
       "symbol": "SHANTIGOLD",
-      "entry_time": "2026-03-26T09:15:00+00:00",
-      "exit_time": "2026-05-05T15:15:00+00:00",
+      "entry_time": "2026-03-26T09:15:00+05:30",
+      "exit_time": "2026-05-05T15:15:00+05:30",
       "holding_days": 40,
       "quantity": 567,
       "entry_price": 163.66,
@@ -327,8 +331,8 @@
     },
     {
       "symbol": "GVT&D",
-      "entry_time": "2024-01-01T09:15:00+00:00",
-      "exit_time": "2024-02-08T15:15:00+00:00",
+      "entry_time": "2024-01-01T09:15:00+05:30",
+      "exit_time": "2024-02-08T15:15:00+05:30",
       "holding_days": 38,
       "quantity": 88,
       "entry_price": 552.14,
@@ -340,8 +344,8 @@
     },
     {
       "symbol": "ONESOURCE",
-      "entry_time": "2026-01-27T09:15:00+00:00",
-      "exit_time": "2026-03-08T15:15:00+00:00",
+      "entry_time": "2026-01-27T09:15:00+05:30",
+      "exit_time": "2026-03-06T15:15:00+05:30",
       "holding_days": 40,
       "quantity": 62,
       "entry_price": 1155.68,
@@ -353,8 +357,8 @@
     },
     {
       "symbol": "SKYGOLD",
-      "entry_time": "2024-06-23T09:15:00+00:00",
-      "exit_time": "2024-07-09T15:15:00+00:00",
+      "entry_time": "2024-06-21T09:15:00+05:30",
+      "exit_time": "2024-07-09T15:15:00+05:30",
       "holding_days": 16,
       "quantity": 356,
       "entry_price": 152.94,
@@ -366,8 +370,8 @@
     },
     {
       "symbol": "LTF",
-      "entry_time": "2025-06-25T09:15:00+00:00",
-      "exit_time": "2025-11-02T15:15:00+00:00",
+      "entry_time": "2025-06-25T09:15:00+05:30",
+      "exit_time": "2025-10-31T15:15:00+05:30",
       "holding_days": 130,
       "quantity": 292,
       "entry_price": 204.14,
@@ -381,8 +385,8 @@
   "defensive_stop_samples": [
     {
       "symbol": "HEXT",
-      "entry_time": "2026-02-24T09:15:00+00:00",
-      "exit_time": "2026-03-10T15:15:00+00:00",
+      "entry_time": "2026-02-24T09:15:00+05:30",
+      "exit_time": "2026-03-10T15:15:00+05:30",
       "holding_days": 14,
       "quantity": 329,
       "entry_price": 451.39,
@@ -394,8 +398,8 @@
     },
     {
       "symbol": "HEXT",
-      "entry_time": "2026-02-22T09:15:00+00:00",
-      "exit_time": "2026-02-24T15:15:00+00:00",
+      "entry_time": "2026-02-20T09:15:00+05:30",
+      "exit_time": "2026-02-24T15:15:00+05:30",
       "holding_days": 2,
       "quantity": 305,
       "entry_price": 486.7,
@@ -407,8 +411,8 @@
     },
     {
       "symbol": "SHANTIGOLD",
-      "entry_time": "2026-02-04T09:15:00+00:00",
-      "exit_time": "2026-03-12T15:15:00+00:00",
+      "entry_time": "2026-02-04T09:15:00+05:30",
+      "exit_time": "2026-03-12T15:15:00+05:30",
       "holding_days": 36,
       "quantity": 727,
       "entry_price": 202.08,
@@ -420,8 +424,8 @@
     },
     {
       "symbol": "LTF",
-      "entry_time": "2025-12-15T09:15:00+00:00",
-      "exit_time": "2026-01-20T15:15:00+00:00",
+      "entry_time": "2025-12-15T09:15:00+05:30",
+      "exit_time": "2026-01-20T15:15:00+05:30",
       "holding_days": 36,
       "quantity": 465,
       "entry_price": 297.88,
@@ -433,8 +437,8 @@
     },
     {
       "symbol": "VMM",
-      "entry_time": "2025-09-10T09:15:00+00:00",
-      "exit_time": "2025-11-05T15:15:00+00:00",
+      "entry_time": "2025-09-10T09:15:00+05:30",
+      "exit_time": "2025-11-05T15:15:00+05:30",
       "holding_days": 56,
       "quantity": 863,
       "entry_price": 150.49,
@@ -450,14 +454,16 @@
     "sharpe_ratio_annualized_rf_0pct": 1.46,
     "sortino_ratio_annualized_rf_6_5pct": 1.63,
     "sortino_ratio_annualized_rf_0pct": 3.14,
-    "calmar_ratio": 2.33,
+    "calmar_ratio_net": 1.77,
+    "calmar_ratio_gross": 2.36,
     "profit_factor": 1.86,
     "win_rate_pct": 60.66,
-    "benchmark_rf_rate": "6.50% (RBI 91-Day T-Bill Yield)"
+    "benchmark_rf_rate": "6.50% (RBI 91-Day T-Bill Yield)",
+    "benchmark_nifty50_sharpe_same_period": "0.45 - 0.52"
   },
   "monte_carlo_analysis": {
     "simulation_runs": 10000,
-    "simulation_method": "Empirical Bootstrap Resampling with Replacement across 31 Monthly Windows & 359 Settled Legs",
+    "simulation_method": "Empirical Block Bootstrap Resampling with Replacement across 31 Monthly Windows",
     "probability_of_positive_return_pct": 99.05,
     "risk_of_ruin_15pct_drawdown": 3.94,
     "risk_of_ruin_20pct_drawdown": 0.69,
@@ -467,8 +473,8 @@
       1125971.95,
       1977561.46
     ],
-    "median_cagr_pct": 17.19,
-    "ci_95_cagr_pct": [
+    "median_net_cagr_pct": 17.19,
+    "ci_95_net_cagr_pct": [
       4.82,
       31.07
     ],
