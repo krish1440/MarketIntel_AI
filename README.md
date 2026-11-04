@@ -4,7 +4,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![DuckDB](https://img.shields.io/badge/DuckDB-Vectorized_SQL-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)](https://duckdb.org)
 [![Polars](https://img.shields.io/badge/Polars-Rust_DataFrames-CD792C?style=for-the-badge&logo=polars&logoColor=white)](https://pola.rs)
-[![LightGBM](https://img.shields.io/badge/LightGBM-4-Tier_Ensemble-3B7E3E?style=for-the-badge)](https://lightgbm.readthedocs.io)
+[![LightGBM](https://img.shields.io/badge/LightGBM-4--Tier_Ensemble-2E7D32?style=for-the-badge)](https://lightgbm.readthedocs.io)
 [![Next.js](https://img.shields.io/badge/Next.js-14_Terminal-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org)
 [![TradingView](https://img.shields.io/badge/TradingView-Lightweight_Charts_4.2-131722?style=for-the-badge&logo=tradingview&logoColor=white)](https://tradingview.github.io/lightweight-charts/)
 
