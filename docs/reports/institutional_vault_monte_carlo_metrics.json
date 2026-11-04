@@ -1,0 +1,30 @@
+{
+  "ratios": {
+    "sharpe_ratio_annualized_rf_6_5": 0.64,
+    "sharpe_ratio_annualized_rf_0": 1.45,
+    "sortino_ratio_annualized_rf_6_5": 0.7,
+    "sortino_ratio_annualized_rf_0": 1.93,
+    "calmar_ratio": 2.33,
+    "profit_factor": 2.13,
+    "net_profit_factor": 1.55,
+    "win_rate_pct": 60.66
+  },
+  "monte_carlo_10k": {
+    "iterations": 10000,
+    "probability_of_profit_pct": 100.0,
+    "risk_of_ruin_20pct_dd": 0.0,
+    "risk_of_ruin_30pct_dd": 0.0,
+    "median_ending_equity_inr": 1476934.35,
+    "ci_95_ending_equity_inr": [
+      1302519.46,
+      1650121.71
+    ],
+    "median_cagr_pct": 16.74,
+    "ci_95_cagr_pct": [
+      11.06,
+      21.99
+    ],
+    "median_max_drawdown_pct": -3.37,
+    "var_95_worst_drawdown_pct": -5.66
+  }
+}

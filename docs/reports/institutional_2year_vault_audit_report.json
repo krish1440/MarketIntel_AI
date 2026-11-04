@@ -444,5 +444,36 @@
       "net_pnl_pct": -6.35,
       "exit_trigger": "P05_STOP_LOSS_HIT"
     }
-  ]
+  ],
+  "risk_adjusted_ratios": {
+    "sharpe_ratio_annualized_rf_6_5pct": 0.89,
+    "sharpe_ratio_annualized_rf_0pct": 1.46,
+    "sortino_ratio_annualized_rf_6_5pct": 1.63,
+    "sortino_ratio_annualized_rf_0pct": 3.14,
+    "calmar_ratio": 2.33,
+    "profit_factor": 1.86,
+    "win_rate_pct": 60.66,
+    "benchmark_rf_rate": "6.50% (RBI 91-Day T-Bill Yield)"
+  },
+  "monte_carlo_analysis": {
+    "simulation_runs": 10000,
+    "simulation_method": "Empirical Bootstrap Resampling with Replacement across 31 Monthly Windows & 359 Settled Legs",
+    "probability_of_positive_return_pct": 99.05,
+    "risk_of_ruin_15pct_drawdown": 3.94,
+    "risk_of_ruin_20pct_drawdown": 0.69,
+    "risk_of_ruin_30pct_drawdown": 0.0,
+    "median_ending_wealth_inr": 1491240.78,
+    "ci_95_ending_wealth_inr": [
+      1125971.95,
+      1977561.46
+    ],
+    "median_cagr_pct": 17.19,
+    "ci_95_cagr_pct": [
+      4.82,
+      31.07
+    ],
+    "median_simulated_max_drawdown_pct": -7.24,
+    "var_95_worst_drawdown_pct": -14.36,
+    "var_99_worst_drawdown_pct": -18.87
+  }
 }
